@@ -524,7 +524,7 @@ function buildType(ref, type) {
         push("};");
     }
 
-    if (config.encode) {
+    if (config.encode && !(/Ack$/.test(type.name))) {
         push("");
         pushComment([
             "Encodes the specified " + type.name + " message. Does not implicitly {@link " + exportName(type) + ".verify|verify} messages.",
@@ -556,7 +556,7 @@ function buildType(ref, type) {
         }
     }
 
-    if (config.decode) {
+    if (config.decode && !(/Req$/.test(type.name))) {
         push("");
         pushComment([
             "Decodes " + aOrAn(type.name) + " message from the specified reader or buffer.",
