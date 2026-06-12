@@ -13,8 +13,7 @@ var fs   = require("fs"),
     { file: "tests/data/rpc.proto", flags: [] },
     { file: "tests/data/rpc-reserved.proto", flags: [] },
     { file: "tests/data/test.proto", flags: [] },
-    { file: "tests/data/type_url.proto", flags: [] },
-    { file: "bench/data/bench.proto", flags: ["no-create", "no-verify", "no-delimited", "no-convert", "no-verify", "no-typeurl", "no-comments"], out: "bench/data/static_pbjs.js" }
+    { file: "tests/data/type_url.proto", flags: [] }
 ]
 .forEach(function({ file, flags, out }) {
     var basename = file.replace(/\.proto$/, "");
@@ -53,10 +52,9 @@ process.stdout.write("\n");
     { file: "tests/data/rpc.js" },
     { file: "tests/data/rpc-es6.js" },
     { file: "tests/data/rpc-reserved.js" },
-    { file: "tests/data/test.js" },
-    { file: "ext/descriptor/index.js", ext: true }
+    { file: "tests/data/test.js" }
 ]
-.forEach(function({ file, ext }) {
+.forEach(function({ file }) {
     var out = file.replace(/\.js$/, ".d.ts"),
         args = [ "--no-comments" ];
     pbts.main(args.concat(file), function(err, output) {

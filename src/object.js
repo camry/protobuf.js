@@ -142,7 +142,6 @@ Object.defineProperties(ReflectionObject.prototype, {
 /**
  * Converts this reflection object to its descriptor representation.
  * @returns {Object.<string,*>} Descriptor
- * @abstract
  */
 ReflectionObject.prototype.toJSON = /* istanbul ignore next */ function toJSON() {
     throw Error(); // not implemented, shouldn't happen
@@ -214,7 +213,7 @@ ReflectionObject.prototype._resolveFeatures = function _resolveFeatures(edition)
         throw new Error("Unknown edition for " + this.fullName);
     }
 
-    var protoFeatures = Object.assign(this.options ? Object.assign({},  this.options.features) : {},
+    var protoFeatures = util.merge({}, this.options && this.options.features,
         this._inferLegacyProtoFeatures(edition));
 
     if (this._edition) {
@@ -231,24 +230,22 @@ ReflectionObject.prototype._resolveFeatures = function _resolveFeatures(edition)
         } else {
             throw new Error("Unknown edition: " + edition);
         }
-        this._features = Object.assign(defaults, protoFeatures || {});
-        this._featuresResolved = true;
-        return;
-    }
-
-    // fields in Oneofs aren't actually children of them, so we have to
-    // special-case it
-    /* istanbul ignore else */
-    if (this.partOf instanceof OneOf) {
-        var lexicalParentFeaturesCopy = Object.assign({}, this.partOf._features);
-        this._features = Object.assign(lexicalParentFeaturesCopy, protoFeatures || {});
-    } else if (this.declaringField) {
-        // Skip feature resolution of sister fields.
-    } else if (this.parent) {
-        var parentFeaturesCopy = Object.assign({}, this.parent._features);
-        this._features = Object.assign(parentFeaturesCopy, protoFeatures || {});
+        this._features = util.merge(defaults, protoFeatures);
     } else {
-        throw new Error("Unable to find a parent for " + this.fullName);
+        // fields in Oneofs aren't actually children of them, so we have to
+        // special-case it
+        /* istanbul ignore else */
+        if (this.partOf instanceof OneOf) {
+            var lexicalParentFeaturesCopy = util.merge({}, this.partOf._features);
+            this._features = util.merge(lexicalParentFeaturesCopy, protoFeatures);
+        } else if (this.declaringField) {
+            // Skip feature resolution of sister fields.
+        } else if (this.parent) {
+            var parentFeaturesCopy = util.merge({}, this.parent._features);
+            this._features = util.merge(parentFeaturesCopy, protoFeatures);
+        } else {
+            throw new Error("Unable to find a parent for " + this.fullName);
+        }
     }
     if (this.extensionField) {
         // Sister fields should have the same features as their extensions.
@@ -286,6 +283,8 @@ ReflectionObject.prototype.getOption = function getOption(name) {
  * @returns {ReflectionObject} `this`
  */
 ReflectionObject.prototype.setOption = function setOption(name, value, ifNotSet) {
+    if (name === "__proto__")
+        return this;
     if (!this.options)
         this.options = {};
     if (/^features\./.test(name)) {
@@ -306,6 +305,8 @@ ReflectionObject.prototype.setOption = function setOption(name, value, ifNotSet)
  * @returns {ReflectionObject} `this`
  */
 ReflectionObject.prototype.setParsedOption = function setParsedOption(name, value, propName) {
+    if (name === "__proto__")
+        return this;
     if (!this.parsedOptions) {
         this.parsedOptions = [];
     }

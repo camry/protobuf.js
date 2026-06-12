@@ -7,4 +7,4 @@ $protobuf.configure()
 
 $OUTPUT;
 
-module.exports = $root;
+$DEFAULT_EXPORTmodule.exports = $root;

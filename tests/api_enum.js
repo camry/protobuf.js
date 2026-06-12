@@ -49,6 +49,10 @@ tape.test("reflected enums", function(test) {
         3: "c"
     }, "should also expose any new values by id");
 
+    var special = new protobuf.Enum("Special", {});
+    special.add("__proto__", 1);
+    test.notOk(Object.prototype.hasOwnProperty.call(special.values, "__proto__"), "should ignore reserved enum value names");
+
     test.throws(function() {
         enm.remove(1);
     }, TypeError, "should throw if name is not a string");
@@ -89,10 +93,25 @@ tape.test("reflected enums", function(test) {
     enm.remove("e");
     test.same( enm.valuesOptions, {}, "should clean up value options");
 
+    var enmFromJSON = protobuf.Enum.fromJSON("FromJSON", {
+        values: { a: 0 },
+        valuesOptions: { a: { deprecated: true } }
+    });
+    test.same(enmFromJSON.valuesOptions, { a: { deprecated: true } }, "should import value options from JSON");
+
     enm.reserved = [[100,200], "BAD_NAME"];
     test.throws(function() {
         enm.add("d", 101);
     }, Error, "should throw if id is a reserved number");
+
+    test.throws(function() {
+        enm.add("d", 200);
+    }, Error, "should throw if id is a reserved range end");
+
+    enm.reserved = [[100,100], "BAD_NAME"];
+    test.throws(function() {
+        enm.add("d", 100);
+    }, Error, "should throw if id is a reserved singleton number");
 
     test.throws(function() {
         enm.add("BAD_NAME", 5);
@@ -128,6 +147,56 @@ tape.test("feature resolution legacy proto3", function(test) {
 
     test.equal(Nested._edition, null, "should not set edition");
     test.equal(Nested._features.enum_type, "OPEN", "should be open by default");
+
+    test.end();
+});
+
+tape.test("feature resolution skips unsafe feature keys", function(test) {
+    var enumFeatures = { enum_type: "CLOSED" };
+    Object.defineProperty(enumFeatures, "__proto__", {
+        value: { polluted: true },
+        enumerable: true
+    });
+    enumFeatures.prototype = { polluted: true };
+    enumFeatures.constructor = { polluted: true };
+
+    var valueFeatures = { field_presence: "EXPLICIT" };
+    Object.defineProperty(valueFeatures, "__proto__", {
+        value: { polluted: true },
+        enumerable: true
+    });
+    valueFeatures.prototype = { polluted: true };
+    valueFeatures.constructor = { polluted: true };
+
+    var root = protobuf.Root.fromJSON({
+        nested: {
+            Enum: {
+                edition: "2023",
+                options: { features: enumFeatures },
+                values: {
+                    a: 0
+                },
+                valuesOptions: {
+                    a: {
+                        features: valueFeatures
+                    }
+                }
+            }
+        }
+    }).resolveAll();
+    var Enum = root.lookupEnum("Enum");
+
+    test.equal(Enum._features.enum_type, "CLOSED", "should keep regular enum features");
+    test.equal(Object.getPrototypeOf(Enum._features).polluted, undefined, "should not alter enum feature prototype");
+    test.notOk(Object.prototype.hasOwnProperty.call(Enum._features, "__proto__"), "should skip unsafe enum feature key __proto__");
+    test.notOk(Object.prototype.hasOwnProperty.call(Enum._features, "prototype"), "should skip unsafe enum feature key prototype");
+    test.notOk(Object.prototype.hasOwnProperty.call(Enum._features, "constructor"), "should skip unsafe enum feature key constructor");
+
+    test.equal(Enum._valuesFeatures.a.field_presence, "EXPLICIT", "should keep regular enum value features");
+    test.equal(Object.getPrototypeOf(Enum._valuesFeatures.a).polluted, undefined, "should not alter enum value feature prototype");
+    test.notOk(Object.prototype.hasOwnProperty.call(Enum._valuesFeatures.a, "__proto__"), "should skip unsafe enum value feature key __proto__");
+    test.notOk(Object.prototype.hasOwnProperty.call(Enum._valuesFeatures.a, "prototype"), "should skip unsafe enum value feature key prototype");
+    test.notOk(Object.prototype.hasOwnProperty.call(Enum._valuesFeatures.a, "constructor"), "should skip unsafe enum value feature key constructor");
 
     test.end();
 });

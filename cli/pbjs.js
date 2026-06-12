@@ -10,6 +10,205 @@ var path     = require("path"),
 
 var targets  = util.requireAll("./targets");
 
+var lintDefault = "eslint-disable " + [
+    "block-scoped-var",
+    "id-length",
+    "no-control-regex",
+    "no-magic-numbers",
+    "no-mixed-operators",
+    "no-prototype-builtins",
+    "no-redeclare",
+    "no-shadow",
+    "no-var",
+    "sort-vars",
+    "default-case",
+    "jsdoc/require-param"
+].join(", ");
+
+var defaults = {
+    "target": "json",
+    "create": true,
+    "encode": true,
+    "decode": true,
+    "verify": true,
+    "convert": true,
+    "delimited": true,
+    "typeurl": true,
+    "beautify": true,
+    "comments": true,
+    "service": true,
+    "dts": false,
+    "es6": null,
+    "lint": lintDefault,
+    "keep-case": false,
+    "alt-comment": false,
+    "force-long": false,
+    "force-number": false,
+    "force-enum-string": false,
+    "force-message": false,
+    "null-defaults": false,
+    "null-semantics": false
+};
+
+var opts = {
+    alias: {
+        target: "t",
+        out: "o",
+        path: "p",
+        wrap: "w",
+        root: "r",
+        dts: "d",
+        lint: "l",
+        // backward compatibility:
+        "force-long": "strict-long",
+        "force-message": "strict-message"
+    },
+    string: [ "target", "out", "path", "wrap", "dependency", "root", "lint", "filter" ],
+    boolean: [ "create", "encode", "decode", "verify", "convert", "delimited", "typeurl", "beautify", "comments", "service", "es6", "dts", "sparse", "keep-case", "alt-comment", "force-long", "force-number", "force-enum-string", "force-message", "null-defaults", "null-semantics"],
+    default: defaults
+};
+
+function normalizeOptions(options) {
+    options = protobuf.util.merge({}, options || {});
+    protobuf.util.merge(options, defaults, true);
+
+    Object.keys(options).forEach(function(key) {
+        var camelKey = key.replace(/-([a-z])/g, function($0, $1) {
+            return $1.toUpperCase();
+        });
+        if (camelKey !== key)
+            options[camelKey] = options[key];
+    });
+
+    if (util.isEsmWrapper(options.wrap))
+        options.es6 = true;
+
+    return options;
+}
+
+/**
+ * Generates JavaScript and optional TypeScript declarations from a root.
+ * @param {Root} root Reflected root
+ * @param {Object} options pbjs options
+ * @param {function(?Error, string=, string=)} callback Completion callback
+ * @returns {undefined}
+ * @private
+ */
+exports.generate = function generate(root, options, callback) {
+    options = normalizeOptions(options);
+    var target = targets[options.target];
+    if (!target) {
+        // Require custom target
+        try {
+            target = require(path.resolve(process.cwd(), options.target));
+        } catch (err) {
+            return callback(err);
+        }
+    }
+
+    target(root, options, function targetCallback(err, output) {
+        if (err)
+            return callback(err);
+        if (options.dts)
+            return generateDts(root, options, output, function(dtsErr, dtsOutput) {
+                if (dtsErr)
+                    return callback(dtsErr);
+                return callback(null, output, dtsOutput);
+            });
+        return callback(null, output);
+    });
+    return undefined;
+};
+
+exports.deriveDtsPath = deriveDtsPath;
+exports.sparsify = sparsify;
+
+function deriveDtsPath(out) {
+    return out.replace(/\.(?:[cm]?js)$/i, "") + ".d.ts";
+}
+
+function generateDts(root, argv, output, done) {
+    function runPbts(jsOutput) {
+        var pbtsArgs = [];
+        if (argv.target === "json-module")
+            pbtsArgs.push("--no-constructor");
+        if (!argv.comments)
+            pbtsArgs.push("--no-comments");
+
+        require("./pbts").process(jsOutput, pbtsArgs, done);
+    }
+
+    if (argv.target === "static-module")
+        return runPbts(output);
+
+    var dtsOptions = protobuf.util.merge({}, argv);
+    // The temporary static module can expose the reflected root as a default export
+    // only for ES module declarations. CommonJS has no equivalent default export here.
+    if (util.isEsmWrapper(argv.wrap))
+        dtsOptions.defaultExport = targets["json-module"].defaultExportDoc;
+    return targets["static-module"](root, dtsOptions, function(err, staticOutput) {
+        if (err)
+            return done(err);
+        return runPbts(staticOutput);
+    });
+}
+
+function markReferenced(tobj) {
+    tobj.referenced = true;
+    // also mark a type's fields and oneofs
+    if (tobj.fieldsArray)
+        tobj.fieldsArray.forEach(function(fobj) {
+            fobj.referenced = true;
+        });
+    if (tobj.oneofsArray)
+        tobj.oneofsArray.forEach(function(oobj) {
+            oobj.referenced = true;
+        });
+    // also mark an extension field's extended type, but not its (other) fields
+    if (tobj.extensionField)
+        tobj.extensionField.parent.referenced = true;
+}
+
+function sparsify(root, mainFiles) {
+
+    // 1. mark directly or indirectly referenced objects
+    util.traverse(root, function(obj) {
+        if (!obj.filename)
+            return;
+        if (mainFiles.indexOf(obj.filename) > -1)
+            util.traverseResolved(obj, markReferenced);
+    });
+
+    // 2. empty unreferenced objects
+    util.traverse(root, function(obj) {
+        var parent = obj.parent;
+        if (!parent || obj.referenced) // root or referenced
+            return;
+        // remove unreferenced namespaces
+        if (obj instanceof protobuf.Namespace) {
+            var hasReferenced = false;
+            util.traverse(obj, function(iobj) {
+                if (iobj.referenced)
+                    hasReferenced = true;
+            });
+            if (hasReferenced) { // replace with plain namespace if a namespace subclass
+                if (obj instanceof protobuf.Type || obj instanceof protobuf.Service) {
+                    var robj = new protobuf.Namespace(obj.name, obj.options);
+                    robj.nested = obj.nested;
+                    parent.add(robj);
+                }
+            } else // remove completely if nothing inside is referenced
+                parent.remove(obj);
+
+        // remove everything else unreferenced
+        } else if (!(obj instanceof protobuf.Namespace))
+            parent.remove(obj);
+    });
+
+    // 3. validate that everything is fine
+    root.resolveAll();
+}
+
 /**
  * Runs pbjs programmatically.
  * @param {string[]} args Command line arguments
@@ -17,66 +216,10 @@ var targets  = util.requireAll("./targets");
  * @returns {number|undefined} Exit code, if known
  */
 exports.main = function main(args, callback) {
-    var lintDefault = "eslint-disable " + [
-        "block-scoped-var",
-        "id-length",
-        "no-control-regex",
-        "no-magic-numbers",
-        "no-prototype-builtins",
-        "no-redeclare",
-        "no-shadow",
-        "no-var",
-        "sort-vars"
-    ].join(", ");
-    var argv = minimist(args, {
-        alias: {
-            target: "t",
-            out: "o",
-            path: "p",
-            wrap: "w",
-            root: "r",
-            lint: "l",
-            // backward compatibility:
-            "force-long": "strict-long",
-            "force-message": "strict-message"
-        },
-        string: [ "target", "out", "path", "wrap", "dependency", "root", "lint", "filter" ],
-        boolean: [ "create", "encode", "decode", "verify", "convert", "delimited", "typeurl", "beautify", "comments", "service", "es6", "sparse", "keep-case", "alt-comment", "force-long", "force-number", "force-enum-string", "force-message", "null-defaults", "null-semantics"],
-        default: {
-            target: "json",
-            create: true,
-            encode: true,
-            decode: true,
-            verify: true,
-            convert: true,
-            delimited: true,
-            typeurl: true,
-            beautify: true,
-            comments: true,
-            service: true,
-            es6: null,
-            lint: lintDefault,
-            "keep-case": false,
-            "alt-comment": false,
-            "force-long": false,
-            "force-number": false,
-            "force-enum-string": false,
-            "force-message": false,
-            "null-defaults": false,
-            "null-semantics": false
-        }
-    });
+    var argv = normalizeOptions(minimist(args, opts));
 
-    var target = targets[argv.target],
-        files  = argv._,
+    var files  = argv._,
         paths  = typeof argv.path === "string" ? [ argv.path ] : argv.path || [];
-
-    // alias hyphen args in camel case
-    Object.keys(argv).forEach(function(key) {
-        var camelKey = key.replace(/-([a-z])/g, function($0, $1) { return $1.toUpperCase(); });
-        if (camelKey !== key)
-            argv[camelKey] = argv[key];
-    });
 
     // protobuf.js package directory contains additional, otherwise non-bundled google types
     paths.push(path.relative(process.cwd(), path.join(__dirname, "../protobufjs")) || ".");
@@ -99,10 +242,12 @@ exports.main = function main(args, callback) {
                 "",
                 "  -p, --path       Adds a directory to the include path.",
                 "",
-                "  --filter         Set up a filter to configure only those messages you need and their dependencies to compile, this will effectively reduce the final file size",
-                "                   Set A json file path, Example of file content: {\"messageNames\":[\"mypackage.messageName1\", \"messageName2\"] } ",
+                "  --filter         Path to a JSON file listing messages and their dependencies to keep.",
+                "                   Example: {\"messageNames\":[\"mypackage.Message\",\"Message2\"]}",
                 "",
                 "  -o, --out        Saves to a file instead of writing to stdout.",
+                "",
+                "  -d, --dts        Also saves a .d.ts file next to --out for static-module and json-module.",
                 "",
                 "  --sparse         Exports only those types referenced from a main file (experimental).",
                 "",
@@ -113,7 +258,7 @@ exports.main = function main(args, callback) {
                 "                   default   Default wrapper supporting both CommonJS and AMD",
                 "                   commonjs  CommonJS wrapper",
                 "                   amd       AMD wrapper",
-                "                   es6       ES6 wrapper (implies --es6)",
+                "                   esm       ESM wrapper (implies --es6)",
                 "                   closure   A closure adding to protobuf.roots where protobuf is a global",
                 "",
                 "  --dependency     Specifies which version of protobuf to require. Accepts any valid module id",
@@ -170,10 +315,6 @@ exports.main = function main(args, callback) {
             ++i;
     }
 
-    // Require custom target
-    if (!target)
-        target = require(path.resolve(process.cwd(), argv.target));
-
     var root = new protobuf.Root();
 
     var mainFiles = [];
@@ -205,9 +346,21 @@ exports.main = function main(args, callback) {
         return resolved;
     };
 
-    // `--wrap es6` implies `--es6` but not the other way around. You can still use e.g. `--es6 --wrap commonjs`
-    if (argv.wrap === "es6") {
-        argv.es6 = true;
+    if (argv.dts) {
+        var dtsError = null;
+        if (!argv.out)
+            dtsError = Error("--dts requires --out");
+        else if (argv.target !== "static-module" && argv.target !== "json-module")
+            dtsError = Error("--dts requires --target static-module or json-module");
+        else if (argv.wrap !== "commonjs" && !util.isEsmWrapper(argv.wrap))
+            dtsError = Error("--dts requires --wrap commonjs or esm");
+        if (dtsError) {
+            if (callback) {
+                callback(dtsError);
+                return undefined;
+            }
+            throw dtsError;
+        }
     }
 
     var parseOptions = {
@@ -246,7 +399,7 @@ exports.main = function main(args, callback) {
         try {
             root.loadSync(files, parseOptions).resolveAll(); // sync is deterministic while async is not
             if (argv.sparse)
-                sparsify(root);
+                sparsify(root, mainFiles);
             callTarget();
         } catch (err) {
             if (callback) {
@@ -255,62 +408,6 @@ exports.main = function main(args, callback) {
             }
             throw err;
         }
-    }
-
-    function markReferenced(tobj) {
-        tobj.referenced = true;
-        // also mark a type's fields and oneofs
-        if (tobj.fieldsArray)
-            tobj.fieldsArray.forEach(function(fobj) {
-                fobj.referenced = true;
-            });
-        if (tobj.oneofsArray)
-            tobj.oneofsArray.forEach(function(oobj) {
-                oobj.referenced = true;
-            });
-        // also mark an extension field's extended type, but not its (other) fields
-        if (tobj.extensionField)
-            tobj.extensionField.parent.referenced = true;
-    }
-
-    function sparsify(root) {
-
-        // 1. mark directly or indirectly referenced objects
-        util.traverse(root, function(obj) {
-            if (!obj.filename)
-                return;
-            if (mainFiles.indexOf(obj.filename) > -1)
-                util.traverseResolved(obj, markReferenced);
-        });
-
-        // 2. empty unreferenced objects
-        util.traverse(root, function(obj) {
-            var parent = obj.parent;
-            if (!parent || obj.referenced) // root or referenced
-                return;
-            // remove unreferenced namespaces
-            if (obj instanceof protobuf.Namespace) {
-                var hasReferenced = false;
-                util.traverse(obj, function(iobj) {
-                    if (iobj.referenced)
-                        hasReferenced = true;
-                });
-                if (hasReferenced) { // replace with plain namespace if a namespace subclass
-                    if (obj instanceof protobuf.Type || obj instanceof protobuf.Service) {
-                        var robj = new protobuf.Namespace(obj.name, obj.options);
-                        robj.nested = obj.nested;
-                        parent.add(robj);
-                    }
-                } else // remove completely if nothing inside is referenced
-                    parent.remove(obj);
-
-            // remove everything else unreferenced
-            } else if (!(obj instanceof protobuf.Namespace))
-                parent.remove(obj);
-        });
-
-        // 3. validate that everything is fine
-        root.resolveAll();
     }
 
     function filterMessage() {
@@ -327,26 +424,32 @@ exports.main = function main(args, callback) {
 
     function callTarget() {
         filterMessage();
-        target(root, argv, function targetCallback(err, output) {
+        exports.generate(root, argv, function targetCallback(err, output, dtsOutput) {
             if (err) {
                 if (callback)
                     return callback(err);
                 throw err;
             }
-            try {
-                if (argv.out)
-                    fs.writeFileSync(argv.out, output, { encoding: "utf8" });
-                else if (!callback)
-                    process.stdout.write(output, "utf8");
-                return callback
-                    ? callback(null, output)
-                    : undefined;
-            } catch (err) {
-                if (callback)
-                    return callback(err);
-                throw err;
-            }
+            return writeOutputs(output, dtsOutput);
         });
+    }
+
+    function writeOutputs(output, dtsOutput) {
+        try {
+            if (argv.out) {
+                fs.writeFileSync(argv.out, output, { encoding: "utf8" });
+                if (dtsOutput)
+                    fs.writeFileSync(deriveDtsPath(argv.out), dtsOutput, { encoding: "utf8" });
+            } else if (!callback)
+                process.stdout.write(output, "utf8");
+            return callback
+                ? callback(null, output)
+                : undefined;
+        } catch (err) {
+            if (callback)
+                return callback(err);
+            throw err;
+        }
     }
 
     return undefined;

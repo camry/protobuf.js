@@ -34,6 +34,8 @@ tape.test("reflected services", function(test) {
     test.ok(MyService.get("Other"), "should allow adding other nested objects");
     MyService.remove(other);
     test.notOk(MyService.get("Other"), "should allow removing other nested objects");
+    MyService.add(new protobuf.Method("__proto__", undefined, "MyRequest", "MyResponse"));
+    test.equal(MyService.get("__proto__"), null, "should ignore reserved method names");
     MyService.remove(MyMethod);
     test.notOk(MyService.get("Other"), "should allow removing methods");
     test.same(MyService.toJSON(), def, "should convert to initial JSON afterwards");
@@ -41,9 +43,24 @@ tape.test("reflected services", function(test) {
     def.methods.MyMethod = methodDef;
     MyService = protobuf.Service.fromJSON("MyService", def);
     test.same(MyService.toJSON(), def, "should construct with methods from and convert back to JSON");
-    MyMethod = MyService.get("MyMethod");
 
     test.end();
+});
+
+tape.test("reflected services can call runtime-significant method names", function(test) {
+    var root = protobuf.parse("syntax = \"proto3\"; message Req {} message Res {} service S { rpc rpcCall(Req) returns (Res); }").root;
+    root.resolveAll();
+
+    var Res = root.lookupType("Res"),
+        service = root.lookupService("S").create(function(method, request, callback) {
+            callback(null, Res.encode({}).finish());
+        });
+
+    service.rpcCall({}, function(err, response) {
+        test.error(err, "should call method named rpcCall");
+        test.ok(response instanceof Res.ctor, "should decode the response");
+        test.end();
+    });
 });
 
 tape.test("feature resolution legacy proto3", function(test) {
@@ -66,6 +83,7 @@ tape.test("feature resolution legacy proto3", function(test) {
 
     test.same(Service.toJSON(), json, "JSON should roundtrip");
     test.same(Method.toJSON(), json.methods.Method, "method JSON should roundtrip");
+    test.equal(Method.path, "/Service/Method", "should expose the method path");
 
     test.equal(Service._edition, "proto3", "should infer proto3 syntax");
     test.equal(Service._features.field_presence, "IMPLICIT", "should have implicit presence by default");

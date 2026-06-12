@@ -23,9 +23,12 @@ var base10Re    = /^[1-9][0-9]*$/,
     base16NegRe = /^-?0[x][0-9a-fA-F]+$/,
     base8Re     = /^0[0-7]+$/,
     base8NegRe  = /^-?0[0-7]+$/,
-    numberRe    = /^(?![eE])[0-9]*(?:\.[0-9]*)?(?:[eE][+-]?[0-9]+)?$/,
+    numberRe    = util.patterns.numberRe,
     nameRe      = /^[a-zA-Z_][a-zA-Z_0-9]*$/,
-    typeRefRe   = /^(?:\.?[a-zA-Z_][a-zA-Z_0-9]*)(?:\.[a-zA-Z_][a-zA-Z_0-9]*)*$/;
+    typeRefRe   = util.patterns.typeRefRe;
+
+var maxFieldId = 536870911, // 2^29 - 1
+    maxEnumId = 2147483647; // 2^31 - 1
 
 /**
  * Result object returned from {@link parse}.
@@ -146,7 +149,7 @@ function parse(source, root, options) {
         }
     }
 
-    function readRanges(target, acceptStrings) {
+    function readRanges(target, acceptStrings, max, acceptNegative) {
         var token, start;
         do {
             if (acceptStrings && ((token = peek()) === "\"" || token === "'")) {
@@ -157,7 +160,7 @@ function parse(source, root, options) {
                 }
             } else {
                 try {
-                    target.push([ start = parseId(next()), skip("to", true) ? parseId(next()) : start ]);
+                    target.push([ start = parseId(next(), acceptNegative, max), skip("to", true) ? parseId(next(), acceptNegative, max) : start ]);
                 } catch (err) {
                     if (acceptStrings && typeRefRe.test(token) && edition >= 2023) {
                         target.push(token);
@@ -216,10 +219,10 @@ function parse(source, root, options) {
         throw illegal(token, "number", insideTryCatch);
     }
 
-    function parseId(token, acceptNegative) {
+    function parseId(token, acceptNegative, max) {
         switch (token) {
             case "max": case "MAX": case "Max":
-                return 536870911;
+                return max || maxFieldId;
             case "0":
                 return 0;
         }
@@ -311,7 +314,10 @@ function parse(source, root, options) {
     }
 
 
-    function parseCommon(parent, token) {
+    function parseCommon(parent, token, depth) {
+        if (depth === undefined)
+            depth = 0;
+        // depth is checked by dispatched functions
         switch (token) {
 
             case "option":
@@ -320,7 +326,7 @@ function parse(source, root, options) {
                 return true;
 
             case "message":
-                parseType(parent, token);
+                parseType(parent, token, depth + 1);
                 return true;
 
             case "enum":
@@ -341,14 +347,14 @@ function parse(source, root, options) {
                 }
                 /* eslint-disable no-warning-comments */
                 // TODO: actually enforce visiblity modifiers like protoc does.
-                return parseCommon(parent, token);
+                return parseCommon(parent, token, depth);
 
             case "service":
-                parseService(parent, token);
+                parseService(parent, token, depth + 1);
                 return true;
 
             case "extend":
-                parseExtension(parent, token);
+                parseExtension(parent, token, depth);
                 return true;
         }
         return false;
@@ -376,7 +382,11 @@ function parse(source, root, options) {
         }
     }
 
-    function parseType(parent, token) {
+    function parseType(parent, token, depth) {
+        if (depth === undefined)
+            depth = 0;
+        if (depth > util.nestingLimit)
+            throw Error("max depth exceeded");
 
         /* istanbul ignore if */
         if (!nameRe.test(token = next()))
@@ -384,10 +394,13 @@ function parse(source, root, options) {
 
         var type = new Type(token);
         ifBlock(type, function parseType_block(token) {
-            if (parseCommon(type, token))
+            if (parseCommon(type, token, depth))
                 return;
 
             switch (token) {
+
+                case ";":
+                    break;
 
                 case "map":
                     parseMapField(type, token);
@@ -398,22 +411,22 @@ function parse(source, root, options) {
                         throw illegal(token);
                 /* eslint-disable no-fallthrough */
                 case "repeated":
-                    parseField(type, token);
+                    parseField(type, token, undefined, depth + 1);
                     break;
 
                 case "optional":
                     /* istanbul ignore if */
                     if (edition === "proto3") {
-                        parseField(type, "proto3_optional");
+                        parseField(type, "proto3_optional", undefined, depth + 1);
                     } else if (edition !== "proto2") {
                         throw illegal(token);
                     } else {
-                        parseField(type, "optional");
+                        parseField(type, "optional", undefined, depth + 1);
                     }
                     break;
 
                 case "oneof":
-                    parseOneOf(type, token);
+                    parseOneOf(type, token, depth + 1);
                     break;
 
                 case "extensions":
@@ -431,7 +444,7 @@ function parse(source, root, options) {
                     }
 
                     push(token);
-                    parseField(type, "optional");
+                    parseField(type, "optional", undefined, depth + 1);
                     break;
             }
         });
@@ -441,10 +454,10 @@ function parse(source, root, options) {
         }
     }
 
-    function parseField(parent, rule, extend) {
+    function parseField(parent, rule, extend, depth) {
         var type = next();
         if (type === "group") {
-            parseGroup(parent, rule);
+            parseGroup(parent, rule, extend, depth);
             return;
         }
         // Type names can consume multiple tokens, in multiple variants:
@@ -469,10 +482,13 @@ function parse(source, root, options) {
         if (!nameRe.test(name))
             throw illegal(name, "name");
 
+        var protoName = name;
         name = applyCase(name);
         skip("=");
 
-        var field = new Field(name, parseId(next()), type, rule, extend);
+        var field = new Field(name, parseId(next()), type, rule === "proto3_optional" ? "optional" : rule, extend);
+        if (protoName !== name)
+            field.protoName = protoName;
 
         ifBlock(field, function parseField_block(token) {
 
@@ -501,7 +517,11 @@ function parse(source, root, options) {
         }
     }
 
-    function parseGroup(parent, rule) {
+    function parseGroup(parent, rule, extend, depth) {
+        if (depth === undefined)
+            depth = 0;
+        if (depth > util.nestingLimit)
+            throw Error("max depth exceeded");
         if (edition >= 2023) {
             throw illegal("group");
         }
@@ -518,10 +538,13 @@ function parse(source, root, options) {
         var id = parseId(next());
         var type = new Type(name);
         type.group = true;
-        var field = new Field(fieldName, id, name, rule);
+        var field = new Field(fieldName, id, name, rule, extend);
         field.filename = parse.filename;
         ifBlock(type, function parseGroup_block(token) {
             switch (token) {
+
+                case ";":
+                    break;
 
                 case "option":
                     parseOption(type, token);
@@ -529,20 +552,20 @@ function parse(source, root, options) {
                     break;
                 case "required":
                 case "repeated":
-                    parseField(type, token);
+                    parseField(type, token, undefined, depth + 1);
                     break;
 
                 case "optional":
                     /* istanbul ignore if */
                     if (edition === "proto3") {
-                        parseField(type, "proto3_optional");
+                        parseField(type, "proto3_optional", undefined, depth + 1);
                     } else {
-                        parseField(type, "optional");
+                        parseField(type, "optional", undefined, depth + 1);
                     }
                     break;
 
                 case "message":
-                    parseType(type, token);
+                    parseType(type, token, depth + 1);
                     break;
 
                 case "enum":
@@ -561,10 +584,10 @@ function parse(source, root, options) {
                     token = next();
                     switch (token) {
                         case "message":
-                            parseType(type, token);
+                            parseType(type, token, depth + 1);
                             break;
                         case "enum":
-                            parseType(type, token);
+                            parseType(type, token, depth + 1);
                             break;
                         default:
                             throw illegal(token);
@@ -578,6 +601,10 @@ function parse(source, root, options) {
         });
         parent.add(type)
               .add(field);
+        if (parent === ptr) {
+            topLevelObjects.push(type);
+            topLevelObjects.push(field);
+        }
     }
 
     function parseMapField(parent) {
@@ -603,7 +630,11 @@ function parse(source, root, options) {
             throw illegal(name, "name");
 
         skip("=");
-        var field = new MapField(applyCase(name), parseId(next()), keyType, valueType);
+        var protoName = name;
+        name = applyCase(name);
+        var field = new MapField(name, parseId(next()), keyType, valueType);
+        if (protoName !== name)
+            field.protoName = protoName;
         ifBlock(field, function parseMapField_block(token) {
 
             /* istanbul ignore else */
@@ -619,7 +650,7 @@ function parse(source, root, options) {
         parent.add(field);
     }
 
-    function parseOneOf(parent, token) {
+    function parseOneOf(parent, token, depth) {
 
         /* istanbul ignore if */
         if (!nameRe.test(token = next()))
@@ -632,7 +663,7 @@ function parse(source, root, options) {
                 skip(";");
             } else {
                 push(token);
-                parseField(oneof, "optional");
+                parseField(oneof, "optional", undefined, depth);
             }
         });
         parent.add(oneof);
@@ -647,13 +678,16 @@ function parse(source, root, options) {
         var enm = new Enum(token);
         ifBlock(enm, function parseEnum_block(token) {
           switch(token) {
+            case ";":
+              break;
+
             case "option":
               parseOption(enm, token);
               skip(";");
               break;
 
             case "reserved":
-              readRanges(enm.reserved || (enm.reserved = []), true);
+              readRanges(enm.reserved || (enm.reserved = []), true, maxEnumId, true);
               if(enm.reserved === undefined) enm.reserved = [];
               break;
 
@@ -737,7 +771,11 @@ function parse(source, root, options) {
             setParsedOption(parent, option, optionValue, propName);
     }
 
-    function parseOptionValue(parent, name) {
+    function parseOptionValue(parent, name, depth) {
+        if (depth === undefined)
+            depth = 0;
+        if (depth > util.recursionLimit)
+            throw Error("max depth exceeded");
         // { a: "foo" b { c: "bar" } }
         if (skip("{", true)) {
             var objectResult = {};
@@ -760,18 +798,20 @@ function parse(source, root, options) {
                     // option (my_option) = {
                     //     repeated_value: [ "foo", "bar" ]
                     // };
-                    value = parseOptionValue(parent, name + "." + token);
+                    value = parseOptionValue(parent, name + "." + token, depth + 1);
                 } else if (peek() === "[") {
                     value = [];
                     var lastValue;
                     if (skip("[", true)) {
-                        do {
-                            lastValue = readValue(true);
-                            value.push(lastValue);
-                        } while (skip(",", true));
-                        skip("]");
-                        if (typeof lastValue !== "undefined") {
-                            setOption(parent, name + "." + token, lastValue);
+                        if (!skip("]", true)) {
+                            do {
+                                lastValue = readValue(true);
+                                value.push(lastValue);
+                            } while (skip(",", true));
+                            skip("]");
+                            if (typeof lastValue !== "undefined") {
+                                setOption(parent, name + "." + token, lastValue);
+                            }
                         }
                     }
                 } else {
@@ -784,7 +824,8 @@ function parse(source, root, options) {
                 if (prevValue)
                     value = [].concat(prevValue).concat(value);
 
-                objectResult[propName] = value;
+                if (propName !== "__proto__")
+                    objectResult[propName] = value;
 
                 // Semicolons and commas can be optional
                 skip(",", true);
@@ -805,11 +846,18 @@ function parse(source, root, options) {
             topLevelOptions[name] = value;
             return;
         }
+        // lift json_name onto Field
+        if (name === "json_name" && parent instanceof Field) {
+            parent.jsonName = value;
+            return;
+        }
         if (parent.setOption)
             parent.setOption(name, value);
     }
 
     function setParsedOption(parent, name, value, propName) {
+        if (name === "json_name" && parent instanceof Field)
+            return; // lifted onto Field#jsonName above
         if (parent.setParsedOption)
             parent.setParsedOption(name, value, propName);
     }
@@ -824,7 +872,11 @@ function parse(source, root, options) {
         return parent;
     }
 
-    function parseService(parent, token) {
+    function parseService(parent, token, depth) {
+        if (depth === undefined)
+            depth = 0;
+        if (depth > util.recursionLimit)
+            throw Error("max depth exceeded");
 
         /* istanbul ignore if */
         if (!nameRe.test(token = next()))
@@ -832,11 +884,13 @@ function parse(source, root, options) {
 
         var service = new Service(token);
         ifBlock(service, function parseService_block(token) {
-            if (parseCommon(service, token)) {
+            if (parseCommon(service, token, depth)) {
                 return;
             }
 
             /* istanbul ignore else */
+            if (token === ";")
+                return;
             if (token === "rpc")
                 parseMethod(service, token);
             else
@@ -888,6 +942,8 @@ function parse(source, root, options) {
         ifBlock(method, function parseMethod_block(token) {
 
             /* istanbul ignore else */
+            if (token === ";")
+                return;
             if (token === "option") {
                 parseOption(method, token);
                 skip(";");
@@ -898,7 +954,7 @@ function parse(source, root, options) {
         parent.add(method);
     }
 
-    function parseExtension(parent, token) {
+    function parseExtension(parent, token, depth) {
 
         /* istanbul ignore if */
         if (!typeRefRe.test(token = next()))
@@ -910,15 +966,15 @@ function parse(source, root, options) {
 
                 case "required":
                 case "repeated":
-                    parseField(parent, token, reference);
+                    parseField(parent, token, reference, depth + 1);
                     break;
 
                 case "optional":
                     /* istanbul ignore if */
                     if (edition === "proto3") {
-                        parseField(parent, "proto3_optional", reference);
+                        parseField(parent, "proto3_optional", reference, depth + 1);
                     } else {
-                        parseField(parent, "optional", reference);
+                        parseField(parent, "optional", reference, depth + 1);
                     }
                     break;
 
@@ -927,7 +983,7 @@ function parse(source, root, options) {
                     if (edition === "proto2" || !typeRefRe.test(token))
                         throw illegal(token);
                     push(token);
-                    parseField(parent, "optional", reference);
+                    parseField(parent, "optional", reference, depth + 1);
                     break;
             }
         });
@@ -936,6 +992,9 @@ function parse(source, root, options) {
     var token;
     while ((token = next()) !== null) {
         switch (token) {
+
+            case ";":
+                break;
 
             case "package":
 
@@ -947,10 +1006,6 @@ function parse(source, root, options) {
                 break;
 
             case "import":
-
-                /* istanbul ignore if */
-                if (!head)
-                    throw illegal(token);
 
                 parseImport();
                 break;
@@ -979,7 +1034,7 @@ function parse(source, root, options) {
             default:
 
                 /* istanbul ignore else */
-                if (parseCommon(ptr, token)) {
+                if (parseCommon(ptr, token, 0)) {
                     head = false;
                     continue;
                 }

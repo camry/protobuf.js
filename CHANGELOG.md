@@ -1,5 +1,199 @@
 # Changelog
 
+## [8.6.3](https://github.com/protobufjs/protobuf.js/compare/protobufjs-v8.6.2...protobufjs-v8.6.3) (2026-06-10)
+
+
+### Bug Fixes
+
+* Consistently reject truncated 64-bit varints ([#2322](https://github.com/protobufjs/protobuf.js/issues/2322)) ([ec868f3](https://github.com/protobufjs/protobuf.js/commit/ec868f3c1c38e92fb131fcf1e64e38574bb526b3))
+* Include interfaces in API docs and fix FieldMask doc comment ([#2319](https://github.com/protobufjs/protobuf.js/issues/2319)) ([c98a4e5](https://github.com/protobufjs/protobuf.js/commit/c98a4e5f33c2d4014843c951226e019f1a60b47c))
+* Preserve explicit URLs in path resolution ([#2320](https://github.com/protobufjs/protobuf.js/issues/2320)) ([c97cdbe](https://github.com/protobufjs/protobuf.js/commit/c97cdbe627bf1be5d97847bf1046b4ca991449d3))
+* Remove renamed reflection objects by identity ([#2324](https://github.com/protobufjs/protobuf.js/issues/2324)) ([9c9f8ee](https://github.com/protobufjs/protobuf.js/commit/9c9f8ee79c78b91ca9a46da503a8cc84b0c16f77))
+* Support Node ESM named imports from CommonJS entrypoints ([#2315](https://github.com/protobufjs/protobuf.js/issues/2315)) ([3359e64](https://github.com/protobufjs/protobuf.js/commit/3359e64e8a29aea995a8aaba86623d1b6376cd5b))
+* Support utf8_validation during decode ([#2325](https://github.com/protobufjs/protobuf.js/issues/2325)) ([4dff8e4](https://github.com/protobufjs/protobuf.js/commit/4dff8e46bf1c35351c15065349446774605d6c51))
+
+## [8.6.2](https://github.com/protobufjs/protobuf.js/compare/protobufjs-v8.6.1...protobufjs-v8.6.2) (2026-06-09)
+
+
+### Bug Fixes
+
+* Discard unknown fields by default ([#2310](https://github.com/protobufjs/protobuf.js/issues/2310)) ([bf12d56](https://github.com/protobufjs/protobuf.js/commit/bf12d566c5ba1e1bc24af5882c127bbfd1e2e1d6))
+
+## [8.6.1](https://github.com/protobufjs/protobuf.js/compare/protobufjs-v8.6.0...protobufjs-v8.6.1) (2026-06-07)
+
+
+### Bug Fixes
+
+* **cli:** Consistently wait for pbts output before JSDoc exit ([#2306](https://github.com/protobufjs/protobuf.js/issues/2306)) ([87ff02f](https://github.com/protobufjs/protobuf.js/commit/87ff02fbae6b118f7d9f03bf5ba2cf3eb5c5f774))
+* **cli:** Preserve indentation in multiline declarations ([#2307](https://github.com/protobufjs/protobuf.js/issues/2307)) ([b38748d](https://github.com/protobufjs/protobuf.js/commit/b38748de9de4e38c7c3fa0b4962fc9ef77cc3669))
+* Preserve descriptor metadata needed by protoc-gen-pbjs ([#2308](https://github.com/protobufjs/protobuf.js/issues/2308)) ([a3b8dc7](https://github.com/protobufjs/protobuf.js/commit/a3b8dc7d55ff575baf0485a4467535d60d68c9e6))
+* Remove inquire submodule ([#2305](https://github.com/protobufjs/protobuf.js/issues/2305)) ([cc42616](https://github.com/protobufjs/protobuf.js/commit/cc426169dc70c8fb6ba2550a67c6fb65b9b28c3b))
+
+## [8.6.0](https://github.com/protobufjs/protobuf.js/compare/protobufjs-v8.5.0...protobufjs-v8.6.0) (2026-06-04)
+
+
+### Features
+
+* Add spec-compliant protojson extension ([#2297](https://github.com/protobufjs/protobuf.js/issues/2297)) ([ffd3d51](https://github.com/protobufjs/protobuf.js/commit/ffd3d51b050f766ecc6b91ffc366c30d3536db13))
+
+
+### Bug Fixes
+
+* Avoid name collisions in generated code ([#2302](https://github.com/protobufjs/protobuf.js/issues/2302)) ([ce013ab](https://github.com/protobufjs/protobuf.js/commit/ce013abb069c0df02e261a1ea3019d6c3fbe069e))
+* **cli:** Vendor patched Catharsis for pbts ([#2304](https://github.com/protobufjs/protobuf.js/issues/2304)) ([29f7c96](https://github.com/protobufjs/protobuf.js/commit/29f7c96ede419baa2e5836f7a7b61d510e36693e))
+* Remove postinstall script ([#2299](https://github.com/protobufjs/protobuf.js/issues/2299)) ([b8ed7be](https://github.com/protobufjs/protobuf.js/commit/b8ed7be4a6ca6ff9ea9c19bf0aee657d7572fd8e))
+* Support null-prototype plain objects in converters ([#2300](https://github.com/protobufjs/protobuf.js/issues/2300)) ([bf20d84](https://github.com/protobufjs/protobuf.js/commit/bf20d84c80b0e246a1c1dd88f51c3235be824deb))
+
+## [8.5.0](https://github.com/protobufjs/protobuf.js/compare/protobufjs-v8.4.2...protobufjs-v8.5.0) (2026-05-29)
+
+
+### Features
+
+* Add option to discard unknown fields ([#2289](https://github.com/protobufjs/protobuf.js/issues/2289)) ([f8c489b](https://github.com/protobufjs/protobuf.js/commit/f8c489bf44e09060aa6c63a8a0dea2920fa8e5e6))
+* Expose RPC metadata on service methods ([#2286](https://github.com/protobufjs/protobuf.js/issues/2286)) ([711a279](https://github.com/protobufjs/protobuf.js/commit/711a27995f5d15597462b14a7f2cae3852619a6d))
+
+
+### Bug Fixes
+
+* **cli:** Consistently handle derived names ([#2293](https://github.com/protobufjs/protobuf.js/issues/2293)) ([9e80030](https://github.com/protobufjs/protobuf.js/commit/9e80030b25a24c587fe5f2cae67f66e19b24fee4))
+* Consistently reject null message argument in fromObject ([#2287](https://github.com/protobufjs/protobuf.js/issues/2287)) ([0f6178d](https://github.com/protobufjs/protobuf.js/commit/0f6178d83afab6a48584527f625ebe6ce6671750))
+* Prefer nested type resolution over global fallback ([#2288](https://github.com/protobufjs/protobuf.js/issues/2288)) ([4b4c703](https://github.com/protobufjs/protobuf.js/commit/4b4c703c17b9b089492f77afaa16a6c17c5ccbaa))
+
+## [8.4.2](https://github.com/protobufjs/protobuf.js/compare/protobufjs-v8.4.1...protobufjs-v8.4.2) (2026-05-22)
+
+
+### Bug Fixes
+
+* Align reserved range semantics ([#2277](https://github.com/protobufjs/protobuf.js/issues/2277)) ([48aa10f](https://github.com/protobufjs/protobuf.js/commit/48aa10f642bde16b6061463cd9ee9fa6f495532f))
+* Coerce int32 values before writer sizing ([#2281](https://github.com/protobufjs/protobuf.js/issues/2281)) ([53c2e54](https://github.com/protobufjs/protobuf.js/commit/53c2e54729cdb9aed87e59c40215cb44fdeb122e))
+
+## [8.4.1](https://github.com/protobufjs/protobuf.js/compare/protobufjs-v8.4.0...protobufjs-v8.4.1) (2026-05-21)
+
+
+### Bug Fixes
+
+* Correct util helper typing ([#2279](https://github.com/protobufjs/protobuf.js/issues/2279)) ([664a3d1](https://github.com/protobufjs/protobuf.js/commit/664a3d1e0c741e328d53ea6e6ab251277566279c))
+* Decode omitted long map values as Long ([#2264](https://github.com/protobufjs/protobuf.js/issues/2264)) ([a71254b](https://github.com/protobufjs/protobuf.js/commit/a71254b23846f35048f773b132aa177511a960bc))
+* Expose Field rule declaration ([#2261](https://github.com/protobufjs/protobuf.js/issues/2261)) ([1664cbf](https://github.com/protobufjs/protobuf.js/commit/1664cbf24afe7751563ddb80a030395ad2ec989d))
+* Improve message return typings ([#2274](https://github.com/protobufjs/protobuf.js/issues/2274)) ([0f54489](https://github.com/protobufjs/protobuf.js/commit/0f544899c1e35567b2dffa38e9204627c1759241))
+* Misc utility hardening ([#2272](https://github.com/protobufjs/protobuf.js/issues/2272)) ([3de631b](https://github.com/protobufjs/protobuf.js/commit/3de631b233da638852d5028d44d21800d801ca69))
+* Omit proto3 synthetic oneofs in toObject ([#2273](https://github.com/protobufjs/protobuf.js/issues/2273)) ([9a78a4a](https://github.com/protobufjs/protobuf.js/commit/9a78a4a195c0bd66f92fc73ec1cb87e21fdaa5fe))
+* Preserve writer state in static encodeDelimited ([#2275](https://github.com/protobufjs/protobuf.js/issues/2275)) ([d28ec57](https://github.com/protobufjs/protobuf.js/commit/d28ec57e9eae7e1a67985ba76676c70534c42cab))
+* Register empty common in light build ([#2262](https://github.com/protobufjs/protobuf.js/issues/2262)) ([6cc4bc2](https://github.com/protobufjs/protobuf.js/commit/6cc4bc2c5a0676cc78039b806e28818fdc26bb99))
+* Treat fixed64 as unsigned in converters ([#2265](https://github.com/protobufjs/protobuf.js/issues/2265)) ([d8a6983](https://github.com/protobufjs/protobuf.js/commit/d8a6983747150db0b0da11f85db78ffeed69c35a))
+
+## [8.4.0](https://github.com/protobufjs/protobuf.js/compare/protobufjs-v8.3.0...protobufjs-v8.4.0) (2026-05-18)
+
+
+### Features
+
+* Support BigInt conversions ([#2257](https://github.com/protobufjs/protobuf.js/issues/2257)) ([36873e6](https://github.com/protobufjs/protobuf.js/commit/36873e69285251a7b6db8d14c8858fc31ef521d8))
+
+## [8.3.0](https://github.com/protobufjs/protobuf.js/compare/protobufjs-v8.2.1...protobufjs-v8.3.0) (2026-05-13)
+
+
+### Features
+
+* Improve generated typings ([#2244](https://github.com/protobufjs/protobuf.js/issues/2244)) ([faa424e](https://github.com/protobufjs/protobuf.js/commit/faa424e3837fe43f1f010b0ccdeb583d808a57cf))
+
+## [8.2.1](https://github.com/protobufjs/protobuf.js/compare/protobufjs-v8.2.0...protobufjs-v8.2.1) (2026-05-13)
+
+
+### Bug Fixes
+
+* Consolidate depth limit checks ([#2246](https://github.com/protobufjs/protobuf.js/issues/2246)) ([9050289](https://github.com/protobufjs/protobuf.js/commit/9050289ad214ea351d3b030cbc74385e81e02d79))
+* Preserve explicit enum zero if not the default ([#2249](https://github.com/protobufjs/protobuf.js/issues/2249)) ([9621b35](https://github.com/protobufjs/protobuf.js/commit/9621b35eb1f6bbecf098f8f5ba59e8d02eca7524))
+
+
+### Performance Improvements
+
+* Slightly optimize generated code ([#2242](https://github.com/protobufjs/protobuf.js/issues/2242)) ([c41160c](https://github.com/protobufjs/protobuf.js/commit/c41160cda6a5f65b0960b194e7f32dd7e7d5ed49))
+
+## [8.2.0](https://github.com/protobufjs/protobuf.js/compare/protobufjs-v8.0.3...protobufjs-v8.2.0) (2026-05-09)
+
+
+### Features
+
+* Add finishInto() for zero-copy serialization into existing buffers ([#2196](https://github.com/protobufjs/protobuf.js/issues/2196)) ([657d6f1](https://github.com/protobufjs/protobuf.js/commit/657d6f1328fa9bb55c5be2b8055e68f8da4da98b))
+* Add textformat extension ([#2233](https://github.com/protobufjs/protobuf.js/issues/2233)) ([4639e29](https://github.com/protobufjs/protobuf.js/commit/4639e2960789f4cc58af1908934caaf14c1fadbc))
+* **cli:** Add optional protoc-gen-pbjs plugin ([#2231](https://github.com/protobufjs/protobuf.js/issues/2231)) ([c9b6a2d](https://github.com/protobufjs/protobuf.js/commit/c9b6a2d2a6f81dd78812a6ce177fa7a5f9de885d))
+* **cli:** Align json-module with static-module output ([#2227](https://github.com/protobufjs/protobuf.js/issues/2227)) ([a015091](https://github.com/protobufjs/protobuf.js/commit/a015091a5862bdae9eb213b6554ab7e5b36187cb))
+* Roundtrip unknown fields ([#2209](https://github.com/protobufjs/protobuf.js/issues/2209)) ([76fa03c](https://github.com/protobufjs/protobuf.js/commit/76fa03c252542b607e4c81a4fe4db12aa1f948af))
+
+
+### Bug Fixes
+
+* Accept URL-safe base64 input ([#2207](https://github.com/protobufjs/protobuf.js/issues/2207)) ([57a3821](https://github.com/protobufjs/protobuf.js/commit/57a3821de0d2ffdac06973be49554dea0332bb7f))
+* Also resolve common definitions by file name ([#2218](https://github.com/protobufjs/protobuf.js/issues/2218)) ([e533950](https://github.com/protobufjs/protobuf.js/commit/e533950dbdc1a5e31ca3611e711a9042019c18c3))
+* Apply oneof last-value wins during decode ([#2193](https://github.com/protobufjs/protobuf.js/issues/2193)) ([cf35cdc](https://github.com/protobufjs/protobuf.js/commit/cf35cdc23237c06e7de603fa8fe36e47b7c037e0))
+* Consistently handle scalar map keys ([#2186](https://github.com/protobufjs/protobuf.js/issues/2186)) ([29b1183](https://github.com/protobufjs/protobuf.js/commit/29b11834520bc4ab0bb377933e4efefbf95f93b2))
+* Consistently reject truncated strings ([#2205](https://github.com/protobufjs/protobuf.js/issues/2205)) ([689e911](https://github.com/protobufjs/protobuf.js/commit/689e911efa3b7e81ea20f29ae2cd725566891c6a))
+* Correct parsedOptions TypeScript types ([#2217](https://github.com/protobufjs/protobuf.js/issues/2217)) ([dbe8d77](https://github.com/protobufjs/protobuf.js/commit/dbe8d7775a46bebaf644461dce586fa29be242f6))
+* Decode bool values from full varints ([#2192](https://github.com/protobufjs/protobuf.js/issues/2192)) ([7b8d5c1](https://github.com/protobufjs/protobuf.js/commit/7b8d5c111a5e517be219872fb36f4dcfe2b6d371))
+* Decode fields by full wire tag ([#2197](https://github.com/protobufjs/protobuf.js/issues/2197)) ([f6264b1](https://github.com/protobufjs/protobuf.js/commit/f6264b1890e85885a22fa323d983f46b6ba9a05e))
+* Decode missing map message values as empty messages ([#2206](https://github.com/protobufjs/protobuf.js/issues/2206)) ([51c1a4f](https://github.com/protobufjs/protobuf.js/commit/51c1a4fd77169565bc6248f996f698ee396c90f0))
+* Generate TypeScript class properties for extensions ([#2187](https://github.com/protobufjs/protobuf.js/issues/2187)) ([ec04bee](https://github.com/protobufjs/protobuf.js/commit/ec04bee4a1aada80083d504f0c879dee6e293799))
+* Harden parser input handling ([#2240](https://github.com/protobufjs/protobuf.js/issues/2240)) ([53a27fc](https://github.com/protobufjs/protobuf.js/commit/53a27fc4617b300f7db98eb172846c4f0e307e7a))
+* Improve Deno and Bun compatibility ([#2228](https://github.com/protobufjs/protobuf.js/issues/2228)) ([6034af8](https://github.com/protobufjs/protobuf.js/commit/6034af80f5fa27ae84d1a5bc7d799e09905367ce))
+* Improve descriptor extension interoperability ([#2232](https://github.com/protobufjs/protobuf.js/issues/2232)) ([effbbc4](https://github.com/protobufjs/protobuf.js/commit/effbbc4c5765426b4acb4044df53347f7a44ad42))
+* Make optional Node module lookups bundler-safe ([#2237](https://github.com/protobufjs/protobuf.js/issues/2237)) ([366030b](https://github.com/protobufjs/protobuf.js/commit/366030b14ab8c0e690889d8810b69b2dfee4593a))
+* Merge singular message fields while decoding ([#2195](https://github.com/protobufjs/protobuf.js/issues/2195)) ([14d9df7](https://github.com/protobufjs/protobuf.js/commit/14d9df796af789aca5ad7a54c67d9be8b84a818a))
+* Omit proto3 implicit scalar defaults ([#2208](https://github.com/protobufjs/protobuf.js/issues/2208)) ([ea1b003](https://github.com/protobufjs/protobuf.js/commit/ea1b0037baf2af5b8c20d79ab62141bdc08eda09))
+* Read non-minimal 32-bit varints correctly ([#2198](https://github.com/protobufjs/protobuf.js/issues/2198)) ([5650a07](https://github.com/protobufjs/protobuf.js/commit/5650a07301752f37a1c294e71574b50ef9d55eb4))
+* Reject malformed field tag varints ([#2224](https://github.com/protobufjs/protobuf.js/issues/2224)) ([1904533](https://github.com/protobufjs/protobuf.js/commit/19045330c108b7fad9e97b787ed641f1637b13b2))
+* Restore first-match namespace lookup ([#2235](https://github.com/protobufjs/protobuf.js/issues/2235)) ([4fb8900](https://github.com/protobufjs/protobuf.js/commit/4fb89005774d8f7e87094ff0b4055b2cda9abb24))
+* Support proto2 extension groups ([#2181](https://github.com/protobufjs/protobuf.js/issues/2181)) ([1039194](https://github.com/protobufjs/protobuf.js/commit/103919422de361935d99a2bb92ead9ca749f0b17))
+* Tighten key2Re regex with non-capturing group ([#2225](https://github.com/protobufjs/protobuf.js/issues/2225)) ([c87b149](https://github.com/protobufjs/protobuf.js/commit/c87b149adc52034363693980b735a63f5af9a266))
+* Validate field and group tags while decoding ([#2200](https://github.com/protobufjs/protobuf.js/issues/2200)) ([c09d4f7](https://github.com/protobufjs/protobuf.js/commit/c09d4f74c1c9d33f2cb3971110f2af4fe51dff93))
+
+
+### Performance Improvements
+
+* Avoid constructor setup during resolve ([#2211](https://github.com/protobufjs/protobuf.js/issues/2211)) ([1bf3c07](https://github.com/protobufjs/protobuf.js/commit/1bf3c07e32e72258d6d9ad5b0fe858ce705df083))
+* Preallocate arrays in converters ([#2219](https://github.com/protobufjs/protobuf.js/issues/2219)) ([62d2155](https://github.com/protobufjs/protobuf.js/commit/62d21559ce1c223ab26a2e998d3b2bce5d22c0d1))
+* Reduce generated code overhead ([#2212](https://github.com/protobufjs/protobuf.js/issues/2212)) ([45ec503](https://github.com/protobufjs/protobuf.js/commit/45ec503c299ea16523e990b8a50cad977ef93e6a))
+* Tweak reader varint32 and string cases ([#2220](https://github.com/protobufjs/protobuf.js/issues/2220)) ([4076ea8](https://github.com/protobufjs/protobuf.js/commit/4076ea84d0b1804d9a421a77c5cac8b141917833))
+
+## 8.1.0 (skipped)
+
+This version was skipped. Note that the 8.1.x-experimental line has diverged and should not be used.
+
+## [8.0.3](https://github.com/protobufjs/protobuf.js/compare/protobufjs-v8.0.2...protobufjs-v8.0.3) (2026-04-27)
+
+
+### Bug Fixes
+
+* Accept imports after declarations ([#2178](https://github.com/protobufjs/protobuf.js/issues/2178)) ([24651c9](https://github.com/protobufjs/protobuf.js/commit/24651c9ce5b83585688c8cddc8aa368fb8acd3aa))
+
+## [8.0.2](https://github.com/protobufjs/protobuf.js/compare/protobufjs-v8.0.1...protobufjs-v8.0.2) (2026-04-27)
+
+
+### Bug Fixes
+
+* Accept empty statements in proto definitions ([#2176](https://github.com/protobufjs/protobuf.js/issues/2176)) ([a26dd61](https://github.com/protobufjs/protobuf.js/commit/a26dd61b7536fe53a434ed962e61450b5eaac4c9))
+* Correct alternate comment mode line numbers ([#2159](https://github.com/protobufjs/protobuf.js/issues/2159)) ([e550cd2](https://github.com/protobufjs/protobuf.js/commit/e550cd285e4b42ec9f33c761072250f1b4f697c0))
+* Correct ES6 wrapper imports in static-module output ([#2151](https://github.com/protobufjs/protobuf.js/issues/2151)) ([88f5a76](https://github.com/protobufjs/protobuf.js/commit/88f5a76332dfb1a4fb142b40756a862cc1ac6119))
+* Don't include `[@exports](https://github.com/exports)` for enums ([#1824](https://github.com/protobufjs/protobuf.js/issues/1824)) ([eb256f0](https://github.com/protobufjs/protobuf.js/commit/eb256f0192601d1c01de554eecdcc406abea9d1c))
+* Forward group end tag in lazy decode ([#2162](https://github.com/protobufjs/protobuf.js/issues/2162)) ([3a48675](https://github.com/protobufjs/protobuf.js/commit/3a48675056d340e6ebe7ef86b3a9b0f1953e0242))
+* Harden input handling ([#2163](https://github.com/protobufjs/protobuf.js/issues/2163)) ([6eb3a3b](https://github.com/protobufjs/protobuf.js/commit/6eb3a3b90db02d3e8447ea57fcc835459bff2e51))
+* limit depth of recursion in Reader.prototype.skipType ([#2143](https://github.com/protobufjs/protobuf.js/issues/2143)) ([0f643d5](https://github.com/protobufjs/protobuf.js/commit/0f643d52a91ce0b953101c7065775b8a9a2e72e2))
+* Parse empty repeated options ([#2161](https://github.com/protobufjs/protobuf.js/issues/2161)) ([8c5060f](https://github.com/protobufjs/protobuf.js/commit/8c5060f3cf4227471dbcb554a4927495216c970c))
+* refactor the code to remove subpackages ([#2146](https://github.com/protobufjs/protobuf.js/issues/2146)) ([2fe8b09](https://github.com/protobufjs/protobuf.js/commit/2fe8b0940eb7a1a450d2c39045f3e3226867cb09))
+* Remove jsdoc includePattern ([#2089](https://github.com/protobufjs/protobuf.js/issues/2089)) ([0fead2e](https://github.com/protobufjs/protobuf.js/commit/0fead2ed7b9d1a705773766a3f15ad961de1f815))
+* Run pbts jsdoc without a shell ([#2160](https://github.com/protobufjs/protobuf.js/issues/2160)) ([648b760](https://github.com/protobufjs/protobuf.js/commit/648b760fa6398a52a330840211fd296eecefab11))
+* Support .cjs and .mjs extensions in pbts ([#2152](https://github.com/protobufjs/protobuf.js/issues/2152)) ([aef016a](https://github.com/protobufjs/protobuf.js/commit/aef016adb2e06be4c59e5a5a40977e71ceff52ae))
+
+## [8.0.1](https://github.com/protobufjs/protobuf.js/compare/protobufjs-v8.0.0...protobufjs-v8.0.1) (2026-03-11)
+
+
+### Bug Fixes
+
+* bump protobufjs dependency version for cli package ([#2128](https://github.com/protobufjs/protobuf.js/issues/2128)) ([549b05e](https://github.com/protobufjs/protobuf.js/commit/549b05ecd95e23da40fa1a36a9336c57946b8377))
+* correct json syntax in tsconfig.json ([#2120](https://github.com/protobufjs/protobuf.js/issues/2120)) ([8065625](https://github.com/protobufjs/protobuf.js/commit/80656255c75000f3e954e036cdfcb5bfd0a8c687))
+* **descriptor:** guard oneof index for non-Type parents ([#2122](https://github.com/protobufjs/protobuf.js/issues/2122)) ([1cac5cf](https://github.com/protobufjs/protobuf.js/commit/1cac5cf811d0855b27dcde73a3a04d15efde3728))
+* do not allow setting __proto__ in Message constructor ([#2126](https://github.com/protobufjs/protobuf.js/issues/2126)) ([f05e3c3](https://github.com/protobufjs/protobuf.js/commit/f05e3c3bdd0b3c2cddbf8540bb5bd4d394a693ad))
+* filter invalid characters from the type name ([#2127](https://github.com/protobufjs/protobuf.js/issues/2127)) ([535df44](https://github.com/protobufjs/protobuf.js/commit/535df444ac060243722ac5d672db205e5c531d75))
+
 ## [8.0.0](https://github.com/protobufjs/protobuf.js/compare/protobufjs-v7.5.4...protobufjs-v8.0.0) (2025-12-16)
 
 
