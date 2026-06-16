@@ -845,7 +845,7 @@ function buildType(ref, type) {
         push("};");
     }
 
-    if (config.encode && !(/(Ack|Base)$/.test(type.name))) {
+    if (config.encode && !(/Ack$/.test(type.name))) {
         push("");
         pushComment([
             "Encodes the specified " + type.name + " message. Does not implicitly {@link " + exportName(type) + ".verify|verify} messages.",
