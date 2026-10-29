@@ -164,6 +164,11 @@ tape.test("Options", function (test) {
         test.end();
     });
 
+    test.test(test.name + " - unterminated option name", function (test) {
+        test.throws(() => { protobuf.parse('option foo')});
+        test.end();
+    });
+
     test.test(test.name + " - reserved aggregate option keys", function(test) {
         var parsed = protobuf.parse(
             "syntax = \"proto2\";" +
@@ -183,5 +188,98 @@ tape.test("Options", function (test) {
         test.end();
     });
 
+    test.test(test.name + " - aggregate option special field names", function(test) {
+        var root = protobuf.parse(
+            "syntax = \"proto2\";" +
+            "message Test {" +
+            "  option (foo) = {" +
+            "    regular: 1" +
+            "    [pkg.ext] { enabled: true }" +
+            "    [pkg.scalar]: \"x\"" +
+            "  };" +
+            "}"
+        ).root;
+        var message = root.lookupType("Test"),
+            option = message.parsedOptions[0]["(foo)"];
+
+        test.same(option, {
+            regular: 1,
+            "[pkg.ext]": { enabled: true },
+            "[pkg.scalar]": "x"
+        }, "should preserve bracketed special field names");
+        test.equal(message.options["(foo).regular"], 1, "should keep regular flat option key");
+        test.equal(message.options["(foo).[pkg.ext].enabled"], true, "should keep nested special flat option key");
+        test.equal(message.options["(foo).[pkg.scalar]"], "x", "should keep scalar special flat option key");
+        test.end();
+    });
+
+    test.test(test.name + " - aggregate option Any type URL", function(test) {
+        var root = protobuf.parse(
+            "syntax = \"proto2\";" +
+            "message Test {" +
+            "  option (foo) = {" +
+            "    any {" +
+            "      [type.googleapis.com/pkg.Embedded] { s: \"x\" }" +
+            "    }" +
+            "  };" +
+            "}"
+        ).root;
+        var message = root.lookupType("Test"),
+            option = message.parsedOptions[0]["(foo)"];
+
+        test.same(option, {
+            any: { "[type.googleapis.com/pkg.Embedded]": { s: "x" } }
+        }, "should preserve the Any type URL as a bracketed field name");
+        test.equal(message.options["(foo).any.[type.googleapis.com/pkg.Embedded].s"], "x", "should keep the type URL in the flat option key");
+
+        // Like protoc, the type name is the segment after the last "/" and the URL
+        // prefix is opaque, so a multi-segment prefix parses and is preserved as-is.
+        var multi = protobuf.parse(
+            "syntax = \"proto2\";" +
+            "message Test2 {" +
+            "  option (foo) = { any { [example.com/a/b/pkg.Embedded] { s: \"y\" } } };" +
+            "}"
+        ).root.lookupType("Test2").parsedOptions[0]["(foo)"];
+        test.same(multi, {
+            any: { "[example.com/a/b/pkg.Embedded]": { s: "y" } }
+        }, "should accept and preserve a multi-slash type URL prefix");
+        test.end();
+    });
+
+    test.test(test.name + " - aggregate option arrays", function(test) {
+        var root = protobuf.parse(
+            "syntax = \"proto2\";" +
+            "message Test {" +
+            "  optional string value = 1 [(foo) = {" +
+            "    rules: [" +
+            "      { field: \"id\" }," +
+            "      { field: \"display_name\" }" +
+            "    ]" +
+            "  }];" +
+            "}"
+        ).root;
+        var field = root.lookupType("Test").fields.value,
+            option = field.parsedOptions[0]["(foo)"];
+
+        test.same(option, {
+            rules: [
+                { field: "id" },
+                { field: "display_name" }
+            ]
+        }, "should preserve aggregate option arrays");
+        test.equal(field.options["(foo).rules.field"], "display_name", "should keep the last repeated aggregate field in flat options");
+        test.end();
+    });
+
+    test.end();
+});
+
+tape.test("json_name field option", function(test) {
+    var root = protobuf.parse('syntax = "proto3"; message Test { string user_name = 1 [json_name = "customUserName"]; }').root;
+    var field = root.lookupType("Test").fields.userName;
+
+    test.equal(field.jsonName, "customUserName", "should populate Field#jsonName");
+    test.equal(field.options.json_name, "customUserName", "should preserve the declared field option");
+    test.same(field.parsedOptions, [{ json_name: "customUserName" }], "should preserve parsed option metadata");
     test.end();
 });

@@ -3,7 +3,15 @@ module.exports = Type;
 
 // extends Namespace
 var Namespace = require("./namespace");
-((Type.prototype = Object.create(Namespace.prototype)).constructor = Type).className = "Type";
+Type.prototype = Object.create(Namespace.prototype, {
+    constructor: {
+        value: Type,
+        writable: true,
+        enumerable: false,
+        configurable: true
+    }
+});
+Type.className = "Type";
 
 var Enum      = require("./enum"),
     OneOf     = require("./oneof"),
@@ -61,6 +69,12 @@ function Type(name, options) {
      * @type {boolean|undefined}
      */
     this.group = undefined; // toJSON
+
+    /**
+     * Declared symbol visibility, if any.
+     * @type {"local"|"export"|undefined}
+     */
+    this.visibility = undefined; // toJSON
 
     /**
      * Cached fields by id.
@@ -168,7 +182,13 @@ Object.defineProperties(Type.prototype, {
             // Ensure proper prototype
             var prototype = ctor.prototype;
             if (!(prototype instanceof Message)) {
-                (ctor.prototype = new Message()).constructor = ctor;
+                ctor.prototype = new Message();
+                Object.defineProperty(ctor.prototype, "constructor", {
+                    value: ctor,
+                    writable: true,
+                    enumerable: false,
+                    configurable: true
+                });
                 util.merge(ctor.prototype, prototype);
             }
 
@@ -240,6 +260,7 @@ function clearCache(type) {
  * @property {number[][]} [extensions] Extension ranges
  * @property {Array.<number[]|string>} [reserved] Reserved ranges
  * @property {boolean} [group=false] Whether a legacy group or not
+ * @property {"local"|"export"} [visibility] Declared symbol visibility
  * @property {string|null} [comment] Message type comment
  */
 
@@ -290,6 +311,8 @@ Type.fromJSON = function fromJSON(name, json, depth) {
         type.reserved = json.reserved;
     if (json.group)
         type.group = true;
+    if (json.visibility)
+        type.visibility = json.visibility;
     if (json.comment)
         type.comment = json.comment;
     if (json.edition)
@@ -314,6 +337,7 @@ Type.prototype.toJSON = function toJSON(toJSONOptions) {
         "extensions" , this.extensions && this.extensions.length ? this.extensions : undefined,
         "reserved"   , this.reserved && this.reserved.length ? this.reserved : undefined,
         "group"      , this.group || undefined,
+        "visibility" , this.visibility,
         "nested"     , inherited && inherited.nested || undefined,
         "comment"    , keepComments ? this.comment : undefined
     ]);
@@ -480,6 +504,14 @@ Type.prototype.setup = function setup() {
     // Sets up everything at once so that the prototype chain does not have to be re-evaluated
     // multiple times (V8, soft-deopt prototype-check).
 
+    // Resolve feature defaults incl. field presence before generating codecs
+    var root = this.root;
+    if (root && root._needsRecursiveFeatureResolution) {
+        var edition = root._edition || this._edition;
+        if (edition)
+            root._resolveFeaturesRecursive(edition);
+    }
+
     var fullName = this.fullName,
         types    = [];
     for (var i = 0; i < /* initializes */ this.fieldsArray.length; ++i)
@@ -543,7 +575,7 @@ Type.prototype.encode = function encode_setup(message, writer) { // eslint-disab
  * @returns {Writer} writer
  */
 Type.prototype.encodeDelimited = function encodeDelimited(message, writer) {
-    return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+    return this.encode(message, (writer || Writer.create()).fork()).ldelim();
 };
 
 /**
@@ -568,7 +600,7 @@ Type.prototype.decode = function decode_setup(reader, length) { // eslint-disabl
 Type.prototype.decodeDelimited = function decodeDelimited(reader) {
     if (!(reader instanceof Reader))
         reader = Reader.create(reader);
-    return this.decode(reader, reader.uint32());
+    return this.decode(reader, reader.size());
 };
 
 /**

@@ -13,6 +13,16 @@ function stringMethod(field) {
     return field._features.utf8_validation === "VERIFY" ? "stringVerify" : "string";
 }
 
+function genPreserveUnknown(gen, ref) {
+    /* eslint-disable no-unexpected-multiline */
+    return gen
+        ("if(!r.discardUnknown){")
+            ("util.makeProp(m,\"$unknowns\",false);")
+            ("(m.$unknowns||(m.$unknowns=[])).push(%s)", ref)
+        ("}");
+    /* eslint-enable no-unexpected-multiline */
+}
+
 /**
  * Generates a decoder specific to the specified message type.
  * @param {Type} mtype Message type
@@ -21,14 +31,14 @@ function stringMethod(field) {
 function decoder(mtype) {
     /* eslint-disable no-unexpected-multiline */
     var hasMapField = false,
-        hasImplicitPresenceField = false,
+        needsValueVar = false,
         i = 0;
     for (; i < mtype.fieldsArray.length; ++i) {
         var pfield = mtype._fieldsArray[i];
         if (pfield.map)
             hasMapField = true;
-        if (!pfield.repeated && !pfield.map && !pfield.hasPresence)
-            hasImplicitPresenceField = true;
+        if (pfield.resolvedType instanceof Enum || !pfield.repeated && !pfield.map && !pfield.hasPresence)
+            needsValueVar = true;
     }
     var gen = util.codegen(["r", "l", "z", "q", "g"])
     ("if(!(r instanceof Reader))")
@@ -36,7 +46,17 @@ function decoder(mtype) {
     ("if(q===undefined)q=0")
     ("if(q>Reader.recursionLimit)")
         ("throw Error(\"max depth exceeded\")")
-    ("var c=l===undefined?r.len:r.pos+l,m=g||new C" + (hasMapField ? ",k,v" : hasImplicitPresenceField ? ",v" : ""))
+    ("var c,m" + (hasMapField ? ",k,v" : needsValueVar ? ",v" : ""))
+    ("if(l===undefined)")
+        ("c=r.len")
+    ("else{")
+        ("c=r.pos+l")
+        ("if(c>r.len)")
+            ("throw RangeError(\"index out of range\")")
+        ("l=r.len")
+        ("r.len=c")
+    ("}")
+    ("m=g||new C")
     ("while(r.pos<c){")
         ("var s=r.pos")
         ("var t=r.tag()")
@@ -48,19 +68,25 @@ function decoder(mtype) {
         ("var u=t&7")
         ("switch(t>>>=3){");
     for (i = 0; i < /* initializes */ mtype.fieldsArray.length; ++i) {
-        var field = mtype._fieldsArray[i].resolve(),
-            type  = field.resolvedType instanceof Enum ? "int32" : field.type,
-            ref   = "m" + util.safeProp(field.name);
+        var field  = mtype._fieldsArray[i].resolve(),
+            type   = field.resolvedType instanceof Enum ? "int32" : field.type,
+            ref    = "m" + util.safeProp(field.name),
+            closed = field.resolvedType instanceof Enum && field.resolvedType._features.enum_type === "CLOSED";
 
         // Map fields
         if (field.map) {
             gen
             ("case %i:{", field.id)
                 ("if(u!==2)")
-                    ("break")
+                    ("break");
+            if (!closed) gen
                 ("if(%s===util.emptyObject)", ref)
-                    ("%s={}", ref)
-                ("var c2=r.uint32()+r.pos");
+                    ("%s={}", ref);
+            gen
+                ("var c2=r.size()+r.pos")
+                ("if(c2>r.len)")
+                    ("throw RangeError(\"index out of range\")")
+                ("r.len=c2");
 
             if (types.defaults[field.keyType] !== undefined) gen
                 ("k=%j", types.defaults[field.keyType]);
@@ -89,7 +115,7 @@ function decoder(mtype) {
                                 ("break");
 
             if (types.basic[type] === undefined) gen
-                            ("v=types[%i].decode(r,r.uint32(),undefined,q+1)", i); // can't be groups
+                            ("v=types[%i].decode(r,r.size(),undefined,q+1,v)", i); // can't be groups
             else gen
                             ("v=r.%s()", type === "string" ? stringMethod(field) : type);
 
@@ -98,6 +124,19 @@ function decoder(mtype) {
                     ("}")
                     ("r.skipType(u,q,t2)")
                 ("}");
+            gen
+                ("if(r.pos!==c2)")
+                    ("throw RangeError(\"index out of range\")")
+                ("r.len=c");
+
+            if (closed) { gen
+                ("if(types[%i].valuesById[v]===undefined){", i);
+                    genPreserveUnknown(gen, "r.raw(s,r.pos)")
+                    ("continue")
+                ("}")
+                ("if(%s===util.emptyObject)", ref)
+                    ("%s={}", ref);
+            }
 
             var val = types.basic[type] === undefined ? "v||new types[" + i + "].ctor" : "v";
             if (types.long[field.keyType] !== undefined) gen
@@ -116,27 +155,58 @@ function decoder(mtype) {
             ("{");
 
             // Packable (always check for forward and backward compatiblity)
-            if (types.packed[type] !== undefined) gen
-                ("if(u===2){")
+            if (types.packed[type] !== undefined) {
+                gen
+                ("if(u===2){");
+                if (closed) {
+                    gen
+                    ("var c2=r.size()+r.pos")
+                    ("if(c2>r.len)")
+                        ("throw RangeError(\"index out of range\")")
+                    ("r.len=c2")
+                    ("while(r.pos<c2){")
+                        ("s=r.pos")
+                        ("v=r.%s()", type)
+                        ("if(types[%i].valuesById[v]!==undefined){", i)
+                            ("if(!(%s&&%s.length))", ref, ref)
+                                ("%s=[]", ref)
+                            ("%s.push(v)", ref)
+                        ("}else");
+                            genPreserveUnknown(gen, "util.rawField(" + field.id + ",0,r.raw(s,r.pos))")
+                    ("}");
+                    gen
+                    ("if(r.pos!==c2)")
+                        ("throw RangeError(\"index out of range\")")
+                    ("r.len=c");
+                } else gen
                     ("if(!(%s&&%s.length))", ref, ref)
                         ("%s=[]", ref)
-                    ("var c2=r.uint32()+r.pos")
-                    ("while(r.pos<c2)")
-                        ("%s.push(r.%s())", ref, type)
+                    ("r.%ss(%s)", type, ref);
+                gen
                     ("continue")
                 ("}");
+            }
 
             // Non-packed
             gen
                 ("if(u!==%i)", types.basic[type] === undefined ? field.delimited ? 3 : 2 : types.basic[type])
-                    ("break")
+                    ("break");
+            if (!closed) gen
                 ("if(!(%s&&%s.length))", ref, ref)
                     ("%s=[]", ref);
             if (types.basic[type] === undefined) {
                 if (field.delimited) gen
                     ("%s.push(types[%i].decode(r,undefined,%i,q+1))", ref, i, field.id * 8 + 4);
                 else gen
-                    ("%s.push(types[%i].decode(r,r.uint32(),undefined,q+1))", ref, i);
+                    ("%s.push(types[%i].decode(r,r.size(),undefined,q+1))", ref, i);
+            } else if (closed) { gen
+                    ("v=r.%s()", type)
+                    ("if(types[%i].valuesById[v]!==undefined){", i)
+                        ("if(!(%s&&%s.length))", ref, ref)
+                            ("%s=[]", ref)
+                        ("%s.push(v)", ref)
+                    ("}else");
+                        genPreserveUnknown(gen, "r.raw(s,r.pos)");
             } else gen
                     ("%s.push(r.%s())", ref, type === "string" ? stringMethod(field) : type);
 
@@ -149,39 +219,61 @@ function decoder(mtype) {
             if (field.delimited) gen
                 ("%s=types[%i].decode(r,undefined,%i,q+1,%s)", ref, i, field.id * 8 + 4, ref);
             else gen
-                ("%s=types[%i].decode(r,r.uint32(),undefined,q+1,%s)", ref, i, ref);
+                ("%s=types[%i].decode(r,r.size(),undefined,q+1,%s)", ref, i, ref);
         }
         else if (field.hasPresence) {
             gen
             ("case %i:{", field.id)
                 ("if(u!==%i)", types.basic[type])
-                    ("break")
+                    ("break");
+            if (closed) { gen
+                ("v=r.%s()", type)
+                ("if(types[%i].valuesById[v]!==undefined){", i)
+                    ("%s=v", ref);
+                if (field.partOf) gen
+                    ("m%s=%j", util.safeProp(field.partOf.name), field.name);
+                gen
+                ("}else");
+                    genPreserveUnknown(gen, "r.raw(s,r.pos)");
+            } else gen
                 ("%s=r.%s()", ref, type === "string" ? stringMethod(field) : type);
         } else {
             gen
             ("case %i:{", field.id)
                 ("if(u!==%i)", types.basic[type])
                     ("break");
-            if (field.resolvedType instanceof Enum && field.typeDefault !== 0) gen
-                // TODO: Protoc rejects open enums whose first value is not zero.
-                // We should do the same, but for v8 this would be a regression.
-                ("if((v=r.%s())!==%j)", type, field.typeDefault);
-            else if (type === "string") gen
-                ("if((v=r.%s()).length)", stringMethod(field));
-            else if (type === "bytes") gen
-                ("if((v=r.%s()).length)", type);
-            else if (types.long[type] !== undefined) gen
-                ("if(typeof(v=r.%s())===\"object\"?v.low||v.high:v!==0)", type);
-            else if (type === "double" || type === "float") gen
-                ("if((v=r.%s())!==0)", type);
-            else gen
-                ("if(v=r.%s())", type);
-            gen
-                    ("%s=v", ref)
-                ("else")
-                    ("delete %s", ref); // rare/odd case: later default clears earlier non-default
+            if (closed) { gen
+                ("v=r.%s()", type)
+                ("if(types[%i].valuesById[v]!==undefined){", i)
+                    ("if(v!==%j)", field.typeDefault)
+                        ("%s=v", ref)
+                    ("else")
+                        ("delete %s", ref)
+                ("}else{");
+                    genPreserveUnknown(gen, "r.raw(s,r.pos)")
+                ("}");
+            } else {
+                if (field.resolvedType instanceof Enum && field.typeDefault !== 0) gen
+                    // TODO: Protoc rejects open enums whose first value is not zero.
+                    // We should do the same, but for v8 this would be a regression.
+                    ("if((v=r.%s())!==%j)", type, field.typeDefault);
+                else if (type === "string") gen
+                    ("if((v=r.%s()).length)", stringMethod(field));
+                else if (type === "bytes") gen
+                    ("if((v=r.%s()).length)", type);
+                else if (types.long[type] !== undefined) gen
+                    ("if(typeof(v=r.%s())===\"object\"?v.low||v.high:v!==0)", type);
+                else if (type === "double" || type === "float") gen
+                    ("if(!Object.is(v=r.%s(),0))", type);
+                else gen
+                    ("if(v=r.%s())", type);
+                gen
+                        ("%s=v", ref)
+                    ("else")
+                        ("delete %s", ref); // rare/odd case: later default clears earlier non-default
+            }
         }
-        if (field.partOf) gen
+        if (field.partOf && !closed) gen
                 ("m%s=%j", util.safeProp(field.partOf.name), field.name);
         gen
                 ("continue")
@@ -191,11 +283,13 @@ function decoder(mtype) {
         ("}");
     // Unknown fields
     gen
-        ("r.skipType(%s,q,t)", i ? "u" : "t&7")
-        ("if(!r.discardUnknown){")
-            ("util.makeProp(m,\"$unknowns\",false);")
-            ("(m.$unknowns||(m.$unknowns=[])).push(r.raw(s,r.pos))")
-        ("}")
+        ("r.skipType(%s,q,t)", i ? "u" : "t&7");
+    genPreserveUnknown(gen, "r.raw(s,r.pos)")
+    ("}")
+    ("if(l!==undefined){")
+        ("if(r.pos!==c)")
+            ("throw RangeError(\"index out of range\")")
+        ("r.len=l")
     ("}")
     ("if(z!==undefined)")
         ("throw Error(\"missing end group\")");

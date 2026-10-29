@@ -110,6 +110,65 @@ tape.test("pbjs generates unsigned fixed64 defaults", function(test) {
     });
 });
 
+tape.test("pbjs generates shadow-safe special floating-point defaults", function(test) {
+    cliTest(test, function() {
+        var root = protobuf.parse("syntax = \"proto2\";\
+            message NaN {\
+                message Infinity {\
+                    optional double positive = 1 [default = inf];\
+                    optional double negative = 2 [default = -inf];\
+                    optional float not_a_number = 3 [default = nan];\
+                    optional double negative_zero = 4 [default = -0];\
+                    optional double finite = 5 [default = 1.5];\
+                }\
+            }").root;
+        root.resolveAll();
+
+        var staticTarget = require("../cli/targets/static");
+
+        staticTarget(root, {
+            create: true,
+            convert: true,
+            root: "staticSpecialDefaults"
+        }, function(err, jsCode) {
+            test.error(err, "static code generation worked");
+            if (err) {
+                test.end();
+                return;
+            }
+
+            delete protobuf.roots.staticSpecialDefaults;
+            var $protobuf = protobuf;
+            eval(jsCode);
+
+            var Type = protobuf.roots.staticSpecialDefaults.NaN.Infinity,
+                message = Type.create();
+
+            test.equal(message.positive, Infinity, "generated prototype should expose positive infinity");
+            test.equal(message.negative, -Infinity, "generated prototype should expose negative infinity");
+            test.ok(Number.isNaN(message.notANumber), "generated prototype should expose NaN");
+            test.ok(Object.is(message.negativeZero, -0), "generated prototype should expose negative zero");
+            test.equal(message.finite, 1.5, "generated prototype should expose a finite value");
+
+            var object = Type.toObject(message, { defaults: true });
+            test.equal(object.positive, Infinity, "generated toObject should preserve a positive infinity default");
+            test.equal(object.negative, -Infinity, "generated toObject should preserve a negative infinity default");
+            test.ok(Number.isNaN(object.notANumber), "generated toObject should preserve a NaN default");
+            test.ok(Object.is(object.negativeZero, -0), "generated toObject should preserve a negative zero default");
+            test.equal(object.finite, 1.5, "generated toObject should preserve a finite default");
+
+            var jsonObject = Type.toObject(message, { defaults: true, json: true });
+            test.equal(jsonObject.positive, "Infinity", "generated toObject should JSON-convert a positive infinity default");
+            test.equal(jsonObject.negative, "-Infinity", "generated toObject should JSON-convert a negative infinity default");
+            test.equal(jsonObject.notANumber, "NaN", "generated toObject should JSON-convert a NaN default");
+            test.ok(Object.is(jsonObject.negativeZero, -0), "generated toObject should preserve a negative zero default in JSON mode");
+
+            delete protobuf.roots.staticSpecialDefaults;
+            test.end();
+        });
+    });
+});
+
 tape.test("pbjs static service methods expose rpc metadata", function(test) {
     cliTest(test, function() {
         var root = protobuf.parse([
@@ -315,6 +374,24 @@ tape.test("pbjs generates correct ES module static-module imports", function(tes
             test.ok(jsCode.includes("import $protobuf from \"protobufjs/minimal.js\";"), "esm wrapper uses a default import and explicit .js extension");
             test.end();
         });
+    });
+});
+
+tape.test("pbjs resolves imports from cwd by default", function(test) {
+    cliTest(test, function() {
+        var output = child_process.execFileSync(process.execPath, [
+            path.resolve("cli", "bin", "pbjs"),
+            "-t", "json",
+            path.join("proto", "a.proto"),
+            path.join("proto", "b.proto")
+        ], {
+            cwd: path.resolve("tests", "data", "cli", "default-path"),
+            encoding: "utf8"
+        });
+        var json = JSON.parse(output);
+        test.ok(json.nested.proto.nested.A, "includes imported type");
+        test.ok(json.nested.proto.nested.B, "includes importing type");
+        test.end();
     });
 });
 
@@ -706,6 +783,7 @@ tape.test("pbjs --dts writes module declarations", function(test) {
             test.ok(fs.existsSync(staticOut), "writes static-module javascript");
             test.ok(fs.existsSync(staticDts), "writes static-module declarations");
             var staticTypes = fs.readFileSync(staticDts, "utf8");
+            test.ok(staticTypes.indexOf("import * as $protobuf from \"protobufjs/minimal\";") >= 0, "uses the static-module dependency in declarations");
             test.ok(staticTypes.indexOf("constructor(properties?: Package.$Properties);") >= 0, "keeps constructable static declarations");
             test.ok(staticTypes.indexOf("type $Shape = Package.$Properties;") >= 0, "aliases shape to properties when there is no narrowing");
 
@@ -720,6 +798,7 @@ tape.test("pbjs --dts writes module declarations", function(test) {
                 test.ok(fs.existsSync(jsonOut), "writes json-module javascript");
                 test.ok(fs.existsSync(jsonDts), "writes json-module declarations");
                 var jsonTypes = fs.readFileSync(jsonDts, "utf8");
+                test.ok(jsonTypes.indexOf("import * as $protobuf from \"protobufjs/light\";") >= 0, "uses the json-module dependency in declarations");
                 test.ok(jsonTypes.indexOf("private constructor();") >= 0, "marks reflection-backed declarations as non-constructable");
                 test.ok(jsonTypes.indexOf("Reflection-backed declarations are not constructable. Use Package.create(...) instead.") >= 0, "explains create usage");
                 test.ok(jsonTypes.indexOf("static create(properties?: Package.$Properties): Package;") >= 0, "keeps reflection Type create declaration");
@@ -736,6 +815,7 @@ tape.test("pbjs --dts writes module declarations", function(test) {
                     test.ok(fs.existsSync(jsonEsmOut), "writes json-module esm javascript");
                     test.ok(fs.existsSync(jsonEsmDts), "writes json-module esm declarations");
                     var jsonEsmTypes = fs.readFileSync(jsonEsmDts, "utf8");
+                    test.ok(jsonEsmTypes.indexOf("import * as $protobuf from \"protobufjs/light.js\";") >= 0, "uses the ESM dependency in declarations");
                     test.ok(jsonEsmTypes.indexOf("declare const _default: $protobuf.Root;") >= 0, "declares the default root export");
                     test.ok(jsonEsmTypes.indexOf("export default _default;") >= 0, "exports the default root declaration");
                     test.ok(jsonEsmTypes.indexOf("export class Package") >= 0, "emits message declarations");
@@ -746,6 +826,7 @@ tape.test("pbjs --dts writes module declarations", function(test) {
                         "--wrap", "commonjs",
                         "--out", jsonMinimalOut,
                         "--dts",
+                        "--dependency", "custom-protobuf",
                         "--no-create",
                         "--no-encode",
                         "--no-decode",
@@ -758,7 +839,10 @@ tape.test("pbjs --dts writes module declarations", function(test) {
                         test.error(jsonMinimalErr, "json-module --dts respects static method flags");
                         test.ok(fs.existsSync(jsonMinimalOut), "writes minimal json-module javascript");
                         test.ok(fs.existsSync(jsonMinimalDts), "writes minimal json-module declarations");
+                        var minimalCode = fs.readFileSync(jsonMinimalOut, "utf8");
                         var minimalTypes = fs.readFileSync(jsonMinimalDts, "utf8");
+                        test.ok(minimalCode.indexOf("require(\"custom-protobuf\")") >= 0, "uses a custom dependency in javascript");
+                        test.ok(minimalTypes.indexOf("import * as $protobuf from \"custom-protobuf\";") >= 0, "uses a custom dependency in declarations");
                         test.equal(minimalTypes.indexOf("static create("), -1, "omits disabled create declaration");
                         test.equal(minimalTypes.indexOf("static encode("), -1, "omits disabled encode declaration");
                         test.equal(minimalTypes.indexOf("static decode("), -1, "omits disabled decode declaration");
@@ -1038,6 +1122,31 @@ tape.test("pbjs builds static references from escaped path segments", function(t
     });
 });
 
+tape.test("pbjs sparsify removes extension fields through their declarations", function(test) {
+    var root = new protobuf.Root({ noGoogleTypes: true }),
+        ns = root.define("sparse"),
+        extendedType = new protobuf.Type("ExtendedType"),
+        declaringType = new protobuf.Type("DeclaringType"),
+        declaringField = new protobuf.Field("extension", 100, "string", "optional", "ExtendedType"),
+        mainType = new protobuf.Type("Main");
+
+    extendedType.extensions = [[100, 199]];
+    extendedType.filename = declaringType.filename = declaringField.filename = "imported.proto";
+    mainType.filename = "main.proto";
+    declaringType.add(declaringField);
+    ns.add(extendedType).add(declaringType).add(mainType);
+
+    test.ok(declaringField.extensionField, "creates a synthetic extension field");
+    test.doesNotThrow(function() {
+        require("../cli/pbjs").sparsify(root, ["main.proto"]);
+    }, "sparsifies extension fields without removing their synthetic fields directly");
+    test.equal(root.lookup("sparse.Main"), mainType, "keeps referenced main types");
+    test.equal(root.lookup("sparse.ExtendedType"), null, "removes unreferenced extended types");
+    test.equal(root.lookup("sparse.DeclaringType"), null, "removes unreferenced declaring types");
+    test.equal(declaringField.extensionField, null, "unlinks the synthetic extension field");
+    test.end();
+});
+
 tape.test("pbjs generates static code with message filter", function (test) {
     cliTest(test, function () {
         var root = protobuf.loadSync("tests/data/cli/test-filter.proto");
@@ -1085,4 +1194,3 @@ tape.test("pbjs generates static code with message filter", function (test) {
         });
     });
 });
-

@@ -5,7 +5,7 @@ var $protobuf = require("../../minimal");
 
 // Common aliases
 var $Reader = $protobuf.Reader, $Writer = $protobuf.Writer, $util = $protobuf.util;
-var $Object = $util.global.Object, $undefined = $util.global.undefined, $Error = $util.global.Error, $Array = $util.global.Array, $TypeError = $util.global.TypeError, $String = $util.global.String;
+var $Object = $util.global.Object, $undefined = $util.global.undefined, $Error = $util.global.Error, $RangeError = $util.global.RangeError, $Array = $util.global.Array, $TypeError = $util.global.TypeError, $String = $util.global.String;
 
 // Exported root namespace
 var $root = $protobuf.roots["test_package"] || ($protobuf.roots["test_package"] = {});
@@ -237,26 +237,26 @@ $root.Package = (function() {
             _depth = 0;
         if (_depth > $util.recursionLimit)
             throw $Error("max depth exceeded");
-        if (message.name != null && $Object.hasOwnProperty.call(message, "name"))
+        if (message.name != null && $Object.hasOwnProperty.call(message, "name") && message.name !== "")
             writer.uint32(/* id 1, wireType 2 =*/10).string(message.name);
-        if (message.version != null && $Object.hasOwnProperty.call(message, "version"))
+        if (message.version != null && $Object.hasOwnProperty.call(message, "version") && message.version !== "")
             writer.uint32(/* id 2, wireType 2 =*/18).string(message.version);
-        if (message.description != null && $Object.hasOwnProperty.call(message, "description"))
+        if (message.description != null && $Object.hasOwnProperty.call(message, "description") && message.description !== "")
             writer.uint32(/* id 3, wireType 2 =*/26).string(message.description);
-        if (message.author != null && $Object.hasOwnProperty.call(message, "author"))
+        if (message.author != null && $Object.hasOwnProperty.call(message, "author") && message.author !== "")
             writer.uint32(/* id 4, wireType 2 =*/34).string(message.author);
-        if (message.license != null && $Object.hasOwnProperty.call(message, "license"))
+        if (message.license != null && $Object.hasOwnProperty.call(message, "license") && message.license !== "")
             writer.uint32(/* id 5, wireType 2 =*/42).string(message.license);
         if (message.repository != null && $Object.hasOwnProperty.call(message, "repository"))
             $root.Package.Repository.encode(message.repository, writer.uint32(/* id 6, wireType 2 =*/50).fork(), _depth + 1).ldelim();
-        if (message.bugs != null && $Object.hasOwnProperty.call(message, "bugs"))
+        if (message.bugs != null && $Object.hasOwnProperty.call(message, "bugs") && message.bugs !== "")
             writer.uint32(/* id 7, wireType 2 =*/58).string(message.bugs);
-        if (message.homepage != null && $Object.hasOwnProperty.call(message, "homepage"))
+        if (message.homepage != null && $Object.hasOwnProperty.call(message, "homepage") && message.homepage !== "")
             writer.uint32(/* id 8, wireType 2 =*/66).string(message.homepage);
         if (message.keywords != null && message.keywords.length)
             for (var i = 0; i < message.keywords.length; ++i)
                 writer.uint32(/* id 9, wireType 2 =*/74).string(message.keywords[i]);
-        if (message.main != null && $Object.hasOwnProperty.call(message, "main"))
+        if (message.main != null && $Object.hasOwnProperty.call(message, "main") && message.main !== "")
             writer.uint32(/* id 10, wireType 2 =*/82).string(message.main);
         if (message.bin != null && $Object.hasOwnProperty.call(message, "bin"))
             for (var keys = $Object.keys(message.bin), i = 0; i < keys.length; ++i)
@@ -270,12 +270,12 @@ $root.Package = (function() {
         if (message.devDependencies != null && $Object.hasOwnProperty.call(message, "devDependencies"))
             for (var keys = $Object.keys(message.devDependencies), i = 0; i < keys.length; ++i)
                 writer.uint32(/* id 15, wireType 2 =*/122).fork().uint32(/* id 1, wireType 2 =*/10).string(keys[i]).uint32(/* id 2, wireType 2 =*/18).string(message.devDependencies[keys[i]]).ldelim();
-        if (message.types != null && $Object.hasOwnProperty.call(message, "types"))
+        if (message.types != null && $Object.hasOwnProperty.call(message, "types") && message.types !== "")
             writer.uint32(/* id 17, wireType 2 =*/138).string(message.types);
         if (message.cliDependencies != null && message.cliDependencies.length)
             for (var i = 0; i < message.cliDependencies.length; ++i)
                 writer.uint32(/* id 18, wireType 2 =*/146).string(message.cliDependencies[i]);
-        if (message.versionScheme != null && $Object.hasOwnProperty.call(message, "versionScheme"))
+        if (message.versionScheme != null && $Object.hasOwnProperty.call(message, "versionScheme") && message.versionScheme !== "")
             writer.uint32(/* id 19, wireType 2 =*/154).string(message.versionScheme);
         if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
             for (var i = 0; i < message.$unknowns.length; ++i)
@@ -293,7 +293,7 @@ $root.Package = (function() {
      * @returns {$protobuf.Writer} Writer
      */
     Package.encodeDelimited = function(message, writer) {
-        return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+        return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
     };
 
     /**
@@ -314,7 +314,17 @@ $root.Package = (function() {
             _depth = 0;
         if (_depth > $Reader.recursionLimit)
             throw $Error("max depth exceeded");
-        var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.Package(), key, value;
+        var end, message, key, value;
+        if (length === $undefined)
+            end = reader.len;
+        else {
+            end = reader.pos + length;
+            if (end > reader.len)
+                throw $RangeError("index out of range");
+            length = reader.len;
+            reader.len = end;
+        }
+        message = _target || new $root.Package();
         while (reader.pos < end) {
             var start = reader.pos;
             var tag = reader.tag();
@@ -381,7 +391,7 @@ $root.Package = (function() {
             case 6: {
                     if (wireType !== 2)
                         break;
-                    message.repository = $root.Package.Repository.decode(reader, reader.uint32(), $undefined, _depth + 1, message.repository);
+                    message.repository = $root.Package.Repository.decode(reader, reader.size(), $undefined, _depth + 1, message.repository);
                     continue;
                 }
             case 7: {
@@ -424,7 +434,10 @@ $root.Package = (function() {
                         break;
                     if (message.bin === $util.emptyObject)
                         message.bin = {};
-                    var end2 = reader.uint32() + reader.pos;
+                    var end2 = reader.size() + reader.pos;
+                    if (end2 > reader.len)
+                        throw $RangeError("index out of range");
+                    reader.len = end2;
                     key = "";
                     value = "";
                     while (reader.pos < end2) {
@@ -444,6 +457,9 @@ $root.Package = (function() {
                         }
                         reader.skipType(wireType, _depth, tag2);
                     }
+                    if (reader.pos !== end2)
+                        throw $RangeError("index out of range");
+                    reader.len = end;
                     if (key === "__proto__")
                         $util.makeProp(message.bin, key);
                     message.bin[key] = value;
@@ -454,7 +470,10 @@ $root.Package = (function() {
                         break;
                     if (message.scripts === $util.emptyObject)
                         message.scripts = {};
-                    var end2 = reader.uint32() + reader.pos;
+                    var end2 = reader.size() + reader.pos;
+                    if (end2 > reader.len)
+                        throw $RangeError("index out of range");
+                    reader.len = end2;
                     key = "";
                     value = "";
                     while (reader.pos < end2) {
@@ -474,6 +493,9 @@ $root.Package = (function() {
                         }
                         reader.skipType(wireType, _depth, tag2);
                     }
+                    if (reader.pos !== end2)
+                        throw $RangeError("index out of range");
+                    reader.len = end;
                     if (key === "__proto__")
                         $util.makeProp(message.scripts, key);
                     message.scripts[key] = value;
@@ -484,7 +506,10 @@ $root.Package = (function() {
                         break;
                     if (message.dependencies === $util.emptyObject)
                         message.dependencies = {};
-                    var end2 = reader.uint32() + reader.pos;
+                    var end2 = reader.size() + reader.pos;
+                    if (end2 > reader.len)
+                        throw $RangeError("index out of range");
+                    reader.len = end2;
                     key = "";
                     value = "";
                     while (reader.pos < end2) {
@@ -504,6 +529,9 @@ $root.Package = (function() {
                         }
                         reader.skipType(wireType, _depth, tag2);
                     }
+                    if (reader.pos !== end2)
+                        throw $RangeError("index out of range");
+                    reader.len = end;
                     if (key === "__proto__")
                         $util.makeProp(message.dependencies, key);
                     message.dependencies[key] = value;
@@ -514,7 +542,10 @@ $root.Package = (function() {
                         break;
                     if (message.devDependencies === $util.emptyObject)
                         message.devDependencies = {};
-                    var end2 = reader.uint32() + reader.pos;
+                    var end2 = reader.size() + reader.pos;
+                    if (end2 > reader.len)
+                        throw $RangeError("index out of range");
+                    reader.len = end2;
                     key = "";
                     value = "";
                     while (reader.pos < end2) {
@@ -534,6 +565,9 @@ $root.Package = (function() {
                         }
                         reader.skipType(wireType, _depth, tag2);
                     }
+                    if (reader.pos !== end2)
+                        throw $RangeError("index out of range");
+                    reader.len = end;
                     if (key === "__proto__")
                         $util.makeProp(message.devDependencies, key);
                     message.devDependencies[key] = value;
@@ -563,6 +597,11 @@ $root.Package = (function() {
                 (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
             }
         }
+        if (length !== $undefined) {
+            if (reader.pos !== end)
+                throw $RangeError("index out of range");
+            reader.len = length;
+        }
         if (_end !== $undefined)
             throw $Error("missing end group");
         return message;
@@ -581,7 +620,7 @@ $root.Package = (function() {
     Package.decodeDelimited = function(reader) {
         if (!(reader instanceof $Reader))
             reader = new $Reader(reader);
-        return this.decode(reader, reader.uint32());
+        return this.decode(reader, reader.size());
     };
 
     /**
@@ -1012,9 +1051,9 @@ $root.Package = (function() {
                 _depth = 0;
             if (_depth > $util.recursionLimit)
                 throw $Error("max depth exceeded");
-            if (message.type != null && $Object.hasOwnProperty.call(message, "type"))
+            if (message.type != null && $Object.hasOwnProperty.call(message, "type") && message.type !== "")
                 writer.uint32(/* id 1, wireType 2 =*/10).string(message.type);
-            if (message.url != null && $Object.hasOwnProperty.call(message, "url"))
+            if (message.url != null && $Object.hasOwnProperty.call(message, "url") && message.url !== "")
                 writer.uint32(/* id 2, wireType 2 =*/18).string(message.url);
             if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                 for (var i = 0; i < message.$unknowns.length; ++i)
@@ -1032,7 +1071,7 @@ $root.Package = (function() {
          * @returns {$protobuf.Writer} Writer
          */
         Repository.encodeDelimited = function(message, writer) {
-            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
         };
 
         /**
@@ -1053,7 +1092,17 @@ $root.Package = (function() {
                 _depth = 0;
             if (_depth > $Reader.recursionLimit)
                 throw $Error("max depth exceeded");
-            var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.Package.Repository(), value;
+            var end, message, value;
+            if (length === $undefined)
+                end = reader.len;
+            else {
+                end = reader.pos + length;
+                if (end > reader.len)
+                    throw $RangeError("index out of range");
+                length = reader.len;
+                reader.len = end;
+            }
+            message = _target || new $root.Package.Repository();
             while (reader.pos < end) {
                 var start = reader.pos;
                 var tag = reader.tag();
@@ -1088,6 +1137,11 @@ $root.Package = (function() {
                     (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                 }
             }
+            if (length !== $undefined) {
+                if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                reader.len = length;
+            }
             if (_end !== $undefined)
                 throw $Error("missing end group");
             return message;
@@ -1106,7 +1160,7 @@ $root.Package = (function() {
         Repository.decodeDelimited = function(reader) {
             if (!(reader instanceof $Reader))
                 reader = new $Reader(reader);
-            return this.decode(reader, reader.uint32());
+            return this.decode(reader, reader.size());
         };
 
         /**

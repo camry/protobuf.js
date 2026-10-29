@@ -5,7 +5,7 @@ var $protobuf = require("../../minimal");
 
 // Common aliases
 var $Reader = $protobuf.Reader, $Writer = $protobuf.Writer, $util = $protobuf.util;
-var $Object = $util.global.Object, $undefined = $util.global.undefined, $Error = $util.global.Error, $TypeError = $util.global.TypeError, $String = $util.global.String;
+var $Object = $util.global.Object, $undefined = $util.global.undefined, $Error = $util.global.Error, $RangeError = $util.global.RangeError, $TypeError = $util.global.TypeError, $String = $util.global.String;
 
 // Exported root namespace
 var $root = $protobuf.roots["test_type_url"] || ($protobuf.roots["test_type_url"] = {});
@@ -105,7 +105,7 @@ $root.TypeUrlTest = (function() {
      * @returns {$protobuf.Writer} Writer
      */
     TypeUrlTest.encodeDelimited = function(message, writer) {
-        return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+        return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
     };
 
     /**
@@ -126,7 +126,17 @@ $root.TypeUrlTest = (function() {
             _depth = 0;
         if (_depth > $Reader.recursionLimit)
             throw $Error("max depth exceeded");
-        var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.TypeUrlTest(), value;
+        var end, message, value;
+        if (length === $undefined)
+            end = reader.len;
+        else {
+            end = reader.pos + length;
+            if (end > reader.len)
+                throw $RangeError("index out of range");
+            length = reader.len;
+            reader.len = end;
+        }
+        message = _target || new $root.TypeUrlTest();
         while (reader.pos < end) {
             var start = reader.pos;
             var tag = reader.tag();
@@ -139,7 +149,7 @@ $root.TypeUrlTest = (function() {
             case 1: {
                     if (wireType !== 2)
                         break;
-                    message.nested = $root.TypeUrlTest.Nested.decode(reader, reader.uint32(), $undefined, _depth + 1, message.nested);
+                    message.nested = $root.TypeUrlTest.Nested.decode(reader, reader.size(), $undefined, _depth + 1, message.nested);
                     continue;
                 }
             }
@@ -148,6 +158,11 @@ $root.TypeUrlTest = (function() {
                 $util.makeProp(message, "$unknowns", false);
                 (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
             }
+        }
+        if (length !== $undefined) {
+            if (reader.pos !== end)
+                throw $RangeError("index out of range");
+            reader.len = length;
         }
         if (_end !== $undefined)
             throw $Error("missing end group");
@@ -167,7 +182,7 @@ $root.TypeUrlTest = (function() {
     TypeUrlTest.decodeDelimited = function(reader) {
         if (!(reader instanceof $Reader))
             reader = new $Reader(reader);
-        return this.decode(reader, reader.uint32());
+        return this.decode(reader, reader.size());
     };
 
     /**
@@ -345,7 +360,7 @@ $root.TypeUrlTest = (function() {
                 _depth = 0;
             if (_depth > $util.recursionLimit)
                 throw $Error("max depth exceeded");
-            if (message.a != null && $Object.hasOwnProperty.call(message, "a"))
+            if (message.a != null && $Object.hasOwnProperty.call(message, "a") && message.a !== "")
                 writer.uint32(/* id 1, wireType 2 =*/10).string(message.a);
             if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                 for (var i = 0; i < message.$unknowns.length; ++i)
@@ -363,7 +378,7 @@ $root.TypeUrlTest = (function() {
          * @returns {$protobuf.Writer} Writer
          */
         Nested.encodeDelimited = function(message, writer) {
-            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
         };
 
         /**
@@ -384,7 +399,17 @@ $root.TypeUrlTest = (function() {
                 _depth = 0;
             if (_depth > $Reader.recursionLimit)
                 throw $Error("max depth exceeded");
-            var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.TypeUrlTest.Nested(), value;
+            var end, message, value;
+            if (length === $undefined)
+                end = reader.len;
+            else {
+                end = reader.pos + length;
+                if (end > reader.len)
+                    throw $RangeError("index out of range");
+                length = reader.len;
+                reader.len = end;
+            }
+            message = _target || new $root.TypeUrlTest.Nested();
             while (reader.pos < end) {
                 var start = reader.pos;
                 var tag = reader.tag();
@@ -410,6 +435,11 @@ $root.TypeUrlTest = (function() {
                     (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                 }
             }
+            if (length !== $undefined) {
+                if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                reader.len = length;
+            }
             if (_end !== $undefined)
                 throw $Error("missing end group");
             return message;
@@ -428,7 +458,7 @@ $root.TypeUrlTest = (function() {
         Nested.decodeDelimited = function(reader) {
             if (!(reader instanceof $Reader))
                 reader = new $Reader(reader);
-            return this.decode(reader, reader.uint32());
+            return this.decode(reader, reader.size());
         };
 
         /**

@@ -1,6 +1,6 @@
 {
   "name": "protobufjs",
-  "version": "8.6.3",
+  "version": "8.8.1",
   "description": "Protocol Buffers for JavaScript & TypeScript.",
   "author": "Daniel Wirtz <dcode+protobufjs@dcode.io>",
   "license": "BSD-3-Clause",
@@ -22,7 +22,7 @@
     "fs": false
   },
   "scripts": {
-    "bench": "node bench",
+    "bench": "npm --prefix bench run bench",
     "build": "npm run build:bundle && npm run build:types",
     "build:bundle": "gulp --gulpfile scripts/gulpfile.js",
     "build:tests": "node ./scripts/gentests.js",
@@ -49,13 +49,13 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.0",
-    "@types/node": ">=13.7.0",
+    "@types/node": "^18.19.130",
     "browserify": "^17.0.0",
     "browserify-wrap": "^1.0.2",
     "bundle-collapser": "^1.3.0",
-    "escodegen": "^1.13.0",
+    "escodegen": "^2.0.0",
     "eslint": "^10.0.0",
-    "eslint-plugin-jsdoc": "^62.9.0",
+    "eslint-plugin-jsdoc": "^63.0.0",
     "espree": "^9.0.0",
     "estraverse": "^5.1.0",
     "gh-pages": "^6.0.0",
@@ -71,7 +71,7 @@
     "reflect-metadata": "^0.2.0",
     "tape": "^5.0.0",
     "tslint": "^6.0.0",
-    "typescript": "^3.7.5",
+    "typescript": "^4.9.5",
     "vinyl-buffer": "^1.0.1",
     "vinyl-fs": "^4.0.0",
     "vinyl-source-stream": "^2.0.0"

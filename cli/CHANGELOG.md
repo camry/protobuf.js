@@ -1,5 +1,128 @@
 # Changelog
 
+## [2.7.1](https://github.com/protobufjs/protobuf.js/compare/protobufjs-cli-v2.7.0...protobufjs-cli-v2.7.1) (2026-10-11)
+
+
+### Bug Fixes
+
+* Reject overflowing length prefixes ([#2439](https://github.com/protobufjs/protobuf.js/issues/2439)) ([507c5d0](https://github.com/protobufjs/protobuf.js/commit/507c5d0cdc6d4b3b27dd440af2a853d5ef1405e0))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * protobufjs bumped from file:.. to 8.8.1
+  * peerDependencies
+    * protobufjs bumped from ^8.8.0 to ^8.8.1
+
+## [2.7.0](https://github.com/protobufjs/protobuf.js/compare/protobufjs-cli-v2.6.2...protobufjs-cli-v2.7.0) (2026-08-26)
+
+
+### Features
+
+* Support Edition 2026 ([#2414](https://github.com/protobufjs/protobuf.js/issues/2414)) ([8845d2a](https://github.com/protobufjs/protobuf.js/commit/8845d2aba910d255679fcfe8479f79cc0f8ccf74))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * protobufjs bumped from file:.. to 8.8.0
+  * peerDependencies
+    * protobufjs bumped from ^8.7.2 to ^8.8.0
+
+## [2.6.2](https://github.com/protobufjs/protobuf.js/compare/protobufjs-cli-v2.6.1...protobufjs-cli-v2.6.2) (2026-08-08)
+
+
+### Bug Fixes
+
+* Preserve non-finite defaults in toObject ([#2393](https://github.com/protobufjs/protobuf.js/issues/2393)) ([a38b925](https://github.com/protobufjs/protobuf.js/commit/a38b925802203f8c6c8060fa692f359212ebc717))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * protobufjs bumped from file:.. to 8.7.2
+  * peerDependencies
+    * protobufjs bumped from ^8.7.1 to ^8.7.2
+
+## [2.6.1](https://github.com/protobufjs/protobuf.js/compare/protobufjs-cli-v2.6.0...protobufjs-cli-v2.6.1) (2026-07-12)
+
+
+### Bug Fixes
+
+* **cli:** Handle extensions during sparse generation ([#2386](https://github.com/protobufjs/protobuf.js/issues/2386)) ([1965d37](https://github.com/protobufjs/protobuf.js/commit/1965d37ac40900d943b678be8ed268010c79f50a))
+* **cli:** Match declaration imports to generated modules ([#2385](https://github.com/protobufjs/protobuf.js/issues/2385)) ([3cf7420](https://github.com/protobufjs/protobuf.js/commit/3cf7420b760d7fbf36c699cb249787a58b815912))
+* **cli:** Preserve array element union precedence in pbts ([#2378](https://github.com/protobufjs/protobuf.js/issues/2378)) ([2a697a5](https://github.com/protobufjs/protobuf.js/commit/2a697a5e918ff2cc63bfb6993a5ba17e0d1c1fbd))
+* **cli:** Resolve imports from cwd by default ([#2381](https://github.com/protobufjs/protobuf.js/issues/2381)) ([65f659a](https://github.com/protobufjs/protobuf.js/commit/65f659ac169233edc596fb75870ad75ed913b718))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * protobufjs bumped from file:.. to 8.7.1
+  * peerDependencies
+    * protobufjs bumped from ^8.7.0 to ^8.7.1
+
+## [2.6.0](https://github.com/protobufjs/protobuf.js/compare/protobufjs-cli-v2.5.7...protobufjs-cli-v2.6.0) (2026-07-06)
+
+
+### Features
+
+* Rework encoder architecture and add additional fast paths ([#2359](https://github.com/protobufjs/protobuf.js/issues/2359)) ([e912baf](https://github.com/protobufjs/protobuf.js/commit/e912baf7a42129dd2741ca6fd8803d3a4d46eb9a))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * protobufjs bumped from file:.. to 8.7.0
+  * peerDependencies
+    * protobufjs bumped from ^8.6.6 to ^8.7.0
+
+## [2.5.7](https://github.com/protobufjs/protobuf.js/compare/protobufjs-cli-v2.5.6...protobufjs-cli-v2.5.7) (2026-07-03)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * protobufjs bumped from file:.. to 8.6.6
+  * peerDependencies
+    * protobufjs bumped from ^8.6.5 to ^8.6.6
+
+## [2.5.6](https://github.com/protobufjs/protobuf.js/compare/protobufjs-cli-v2.5.5...protobufjs-cli-v2.5.6) (2026-06-23)
+
+
+### Bug Fixes
+
+* Implement open/closed enum semantics ([#2337](https://github.com/protobufjs/protobuf.js/issues/2337)) ([2abd056](https://github.com/protobufjs/protobuf.js/commit/2abd056f079ed915c5ae8363a427987eff67c9ce))
+* Support hardened prototype properties ([#2313](https://github.com/protobufjs/protobuf.js/issues/2313)) ([1aca107](https://github.com/protobufjs/protobuf.js/commit/1aca107aa7938d1e49a25f9653186db2f40a0253))
+* Use own-property semantics for internal maps ([#2335](https://github.com/protobufjs/protobuf.js/issues/2335)) ([9f97fe4](https://github.com/protobufjs/protobuf.js/commit/9f97fe413072d3beb52c74e62d88ea8adc9444d8))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * protobufjs bumped from file:.. to 8.6.5
+  * peerDependencies
+    * protobufjs bumped from ^8.6.4 to ^8.6.5
+
+## [2.5.5](https://github.com/protobufjs/protobuf.js/compare/protobufjs-cli-v2.5.4...protobufjs-cli-v2.5.5) (2026-06-16)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * protobufjs bumped from file:.. to 8.6.4
+  * peerDependencies
+    * protobufjs bumped from ^8.6.3 to ^8.6.4
+
 ## [2.5.4](https://github.com/protobufjs/protobuf.js/compare/protobufjs-cli-v2.5.3...protobufjs-cli-v2.5.4) (2026-06-10)
 
 

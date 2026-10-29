@@ -1,4 +1,5 @@
 "use strict";
+/* global globalThis */
 var util = exports;
 
 // used to return a Promise where callback is omitted
@@ -53,6 +54,7 @@ util.isNode = Boolean(typeof global !== "undefined"
 util.global = util.isNode && global
            || typeof window !== "undefined" && window
            || typeof self   !== "undefined" && self
+           || typeof globalThis !== "undefined" && globalThis
            || this; // eslint-disable-line no-invalid-this
 
 /**
@@ -135,19 +137,13 @@ util.isSet = function isSet(obj, prop) {
 util.Buffer = (function() {
     try {
         var Buffer = util.global.Buffer;
-        // refuse to use non-node buffers if not explicitly assigned (perf reasons):
-        return Buffer.prototype.utf8Write ? Buffer : /* istanbul ignore next */ null;
+        // refuse to use non-node buffers if not explicitly assigned (perf reasons)
+        return Buffer.prototype.utf8Write || util.isNode ? Buffer : /* istanbul ignore next */ null;
     } catch (e) {
         /* istanbul ignore next */
         return null;
     }
 })();
-
-// Internal alias of or polyfull for Buffer.from.
-util._Buffer_from = null;
-
-// Internal alias of or polyfill for Buffer.allocUnsafe.
-util._Buffer_allocUnsafe = null;
 
 /**
  * Creates a new buffer of whatever type supported by the environment.
@@ -155,23 +151,45 @@ util._Buffer_allocUnsafe = null;
  * @returns {Uint8Array|Buffer} Buffer
  */
 util.newBuffer = function newBuffer(sizeOrArray) {
+    var Buffer = util.Buffer;
     /* istanbul ignore next */
     return typeof sizeOrArray === "number"
-        ? util.Buffer
-            ? util._Buffer_allocUnsafe(sizeOrArray)
-            : new util.Array(sizeOrArray)
-        : util.Buffer
-            ? util._Buffer_from(sizeOrArray)
-            : typeof Uint8Array === "undefined"
-                ? sizeOrArray
-                : new Uint8Array(sizeOrArray);
+        ? Buffer
+            ? Buffer.allocUnsafe(sizeOrArray)
+            : new Uint8Array(sizeOrArray)
+        : Buffer
+            ? Buffer.from(sizeOrArray)
+            : new Uint8Array(sizeOrArray);
 };
 
 /**
- * Array implementation used in the browser. `Uint8Array` if supported, otherwise `Array`.
- * @type {Constructor<Uint8Array>}
+ * Prepends a raw field tag to raw field data.
+ * @param {number} id Field id
+ * @param {number} wireType Wire type
+ * @param {Uint8Array} data Raw field data
+ * @returns {Uint8Array|Buffer} Raw field bytes
+ * @ignore
  */
-util.Array = typeof Uint8Array !== "undefined" ? Uint8Array /* istanbul ignore next */ : Array;
+util.rawField = function rawField(id, wireType, data) {
+    var out = [],
+        tag = id << 3 | wireType;
+    tag >>>= 0;
+    while (tag > 127) {
+        out.push(tag & 127 | 128);
+        tag >>>= 7;
+    }
+    out.push(tag);
+    for (var i = 0; i < data.length; ++i)
+        out.push(data[i]);
+    return util.newBuffer(out);
+};
+
+/**
+ * Array implementation used in the browser.
+ * @type {Constructor<Uint8Array>}
+ * @deprecated Use `Uint8Array` instead.
+ */
+util.Array = Uint8Array;
 
 /**
  * Any compatible Long instance.
@@ -280,7 +298,7 @@ function merge(dst) { // used by converters
         if (!src)
             continue;
         for (var keys = Object.keys(src), i = 0; i < keys.length; ++i)
-            if (!isUnsafeProperty(keys[i]) && (dst[keys[i]] === undefined || !ifNotSet))
+            if (!isUnsafeProperty(keys[i]) && (!ifNotSet || !Object.prototype.hasOwnProperty.call(dst, keys[i]) || dst[keys[i]] === undefined))
                 dst[keys[i]] = src[keys[i]];
     }
     return dst;
@@ -490,26 +508,4 @@ util.toJSONOptions = {
     enums: String,
     bytes: String,
     json: true
-};
-
-// Sets up buffer utility according to the environment (called in index-minimal)
-util._configure = function() {
-    var Buffer = util.Buffer;
-    /* istanbul ignore if */
-    if (!Buffer) {
-        util._Buffer_from = util._Buffer_allocUnsafe = null;
-        return;
-    }
-    // because node 4.x buffers are incompatible & immutable
-    // see: https://github.com/dcodeIO/protobuf.js/pull/665
-    util._Buffer_from = Buffer.from !== Uint8Array.from && Buffer.from ||
-        /* istanbul ignore next */
-        function Buffer_from(value, encoding) {
-            return new Buffer(value, encoding);
-        };
-    util._Buffer_allocUnsafe = Buffer.allocUnsafe ||
-        /* istanbul ignore next */
-        function Buffer_allocUnsafe(size) {
-            return new Buffer(size);
-        };
 };

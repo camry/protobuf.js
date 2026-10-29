@@ -3,7 +3,14 @@ module.exports = BufferReader;
 
 // extends Reader
 var Reader = require("./reader");
-(BufferReader.prototype = Object.create(Reader.prototype)).constructor = BufferReader;
+BufferReader.prototype = Object.create(Reader.prototype, {
+    constructor: {
+        value: BufferReader,
+        writable: true,
+        enumerable: false,
+        configurable: true
+    }
+});
 
 var util = require("./util/minimal");
 
@@ -21,7 +28,7 @@ function BufferReader(buffer) {
      * Read buffer.
      * @name BufferReader#buf
      * @type {Buffer}
-     */
+    */
 }
 
 BufferReader._configure = function () {
@@ -39,8 +46,6 @@ BufferReader._configure = function () {
  * @returns {Buffer} Raw bytes
  */
 BufferReader.prototype.raw = function read_raw_buffer(start, end) {
-    if (start === end)
-        return util.Buffer.alloc(0);
     return this._slice.call(this.buf, start, end);
 };
 
@@ -48,7 +53,7 @@ BufferReader.prototype.raw = function read_raw_buffer(start, end) {
  * @override
  */
 BufferReader.prototype.string = function read_string_buffer() {
-    var len = this.uint32(), // modifies pos
+    var len = this.size(), // modifies pos
         start = this.pos,
         end = this.pos + len;
 

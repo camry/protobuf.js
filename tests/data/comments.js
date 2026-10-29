@@ -5,7 +5,7 @@ var $protobuf = require("../../minimal");
 
 // Common aliases
 var $Reader = $protobuf.Reader, $Writer = $protobuf.Writer, $util = $protobuf.util;
-var $Object = $util.global.Object, $undefined = $util.global.undefined, $Error = $util.global.Error, $TypeError = $util.global.TypeError, $String = $util.global.String, $Number = $util.global.Number, $Boolean = $util.global.Boolean;
+var $Object = $util.global.Object, $undefined = $util.global.undefined, $Error = $util.global.Error, $RangeError = $util.global.RangeError, $TypeError = $util.global.TypeError, $String = $util.global.String, $Number = $util.global.Number, $Boolean = $util.global.Boolean;
 
 // Exported root namespace
 var $root = $protobuf.roots["test_comments"] || ($protobuf.roots["test_comments"] = {});
@@ -108,11 +108,11 @@ $root.Test1 = (function() {
             _depth = 0;
         if (_depth > $util.recursionLimit)
             throw $Error("max depth exceeded");
-        if (message.field1 != null && $Object.hasOwnProperty.call(message, "field1"))
+        if (message.field1 != null && $Object.hasOwnProperty.call(message, "field1") && message.field1 !== "")
             writer.uint32(/* id 1, wireType 2 =*/10).string(message.field1);
-        if (message.field2 != null && $Object.hasOwnProperty.call(message, "field2"))
+        if (message.field2 != null && $Object.hasOwnProperty.call(message, "field2") && message.field2 !== 0)
             writer.uint32(/* id 2, wireType 0 =*/16).uint32(message.field2);
-        if (message.field3 != null && $Object.hasOwnProperty.call(message, "field3"))
+        if (message.field3 != null && $Object.hasOwnProperty.call(message, "field3") && message.field3 !== false)
             writer.uint32(/* id 3, wireType 0 =*/24).bool(message.field3);
         if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
             for (var i = 0; i < message.$unknowns.length; ++i)
@@ -130,7 +130,7 @@ $root.Test1 = (function() {
      * @returns {$protobuf.Writer} Writer
      */
     Test1.encodeDelimited = function(message, writer) {
-        return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+        return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
     };
 
     /**
@@ -151,7 +151,17 @@ $root.Test1 = (function() {
             _depth = 0;
         if (_depth > $Reader.recursionLimit)
             throw $Error("max depth exceeded");
-        var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.Test1(), value;
+        var end, message, value;
+        if (length === $undefined)
+            end = reader.len;
+        else {
+            end = reader.pos + length;
+            if (end > reader.len)
+                throw $RangeError("index out of range");
+            length = reader.len;
+            reader.len = end;
+        }
+        message = _target || new $root.Test1();
         while (reader.pos < end) {
             var start = reader.pos;
             var tag = reader.tag();
@@ -195,6 +205,11 @@ $root.Test1 = (function() {
                 (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
             }
         }
+        if (length !== $undefined) {
+            if (reader.pos !== end)
+                throw $RangeError("index out of range");
+            reader.len = length;
+        }
         if (_end !== $undefined)
             throw $Error("missing end group");
         return message;
@@ -213,7 +228,7 @@ $root.Test1 = (function() {
     Test1.decodeDelimited = function(reader) {
         if (!(reader instanceof $Reader))
             reader = new $Reader(reader);
-        return this.decode(reader, reader.uint32());
+        return this.decode(reader, reader.size());
     };
 
     /**
@@ -416,7 +431,7 @@ $root.Test2 = (function() {
      * @returns {$protobuf.Writer} Writer
      */
     Test2.encodeDelimited = function(message, writer) {
-        return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+        return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
     };
 
     /**
@@ -437,7 +452,17 @@ $root.Test2 = (function() {
             _depth = 0;
         if (_depth > $Reader.recursionLimit)
             throw $Error("max depth exceeded");
-        var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.Test2();
+        var end, message;
+        if (length === $undefined)
+            end = reader.len;
+        else {
+            end = reader.pos + length;
+            if (end > reader.len)
+                throw $RangeError("index out of range");
+            length = reader.len;
+            reader.len = end;
+        }
+        message = _target || new $root.Test2();
         while (reader.pos < end) {
             var start = reader.pos;
             var tag = reader.tag();
@@ -450,6 +475,11 @@ $root.Test2 = (function() {
                 $util.makeProp(message, "$unknowns", false);
                 (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
             }
+        }
+        if (length !== $undefined) {
+            if (reader.pos !== end)
+                throw $RangeError("index out of range");
+            reader.len = length;
         }
         if (_end !== $undefined)
             throw $Error("missing end group");
@@ -469,7 +499,7 @@ $root.Test2 = (function() {
     Test2.decodeDelimited = function(reader) {
         if (!(reader instanceof $Reader))
             reader = new $Reader(reader);
-        return this.decode(reader, reader.uint32());
+        return this.decode(reader, reader.size());
     };
 
     /**
@@ -562,7 +592,7 @@ $root.Test2 = (function() {
  * @property {number} FIVE=5 Leading comment for value with both types of comments after field with trailing comment.
  */
 $root.Test3 = (function() {
-    var valuesById = {}, values = $Object.create(valuesById);
+    var valuesById = $Object.create(null), values = $Object.create(valuesById);
     values[valuesById[1] = "ONE"] = 1;
     values[valuesById[2] = "TWO"] = 2;
     values[valuesById[3] = "THREE"] = 3;

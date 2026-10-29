@@ -19,7 +19,7 @@ tape.test("utf8", function(test) {
     });
 
     test.test(test.name + " - read", function(test) {
-        var comp = utf8.read([], 0, 0);
+        var comp = utf8.read(new Uint8Array(0), 0, 0);
         test.equal(comp, "", "should decode an empty buffer to an empty string");
 
         comp = utf8.read(data, 0, data.length);
@@ -44,7 +44,20 @@ tape.test("utf8", function(test) {
         ].forEach(function(bytes) {
             var overlong = new Buffer(bytes);
             comp = utf8.read(overlong, 0, overlong.length);
-            test.equal(comp, "\ufffd", "should decode overlong UTF-8 sequences as replacement characters");
+            test.equal(comp, overlong.toString("utf8"), "should decode overlong UTF-8 sequences like node buffers");
+        });
+
+        [
+            [0xC3],
+            [0xE2],
+            [0xE2, 0x82],
+            [0xF0],
+            [0xF0, 0x9F],
+            [0xF0, 0x9F, 0x92]
+        ].forEach(function(bytes) {
+            var truncated = new Uint8Array(bytes.concat([0x90, 0x80, 0x80]));
+            comp = utf8.read(truncated, 0, bytes.length);
+            test.equal(comp, "\ufffd", "should decode bounded UTF-8 slices like TextDecoder");
         });
 
         test.end();

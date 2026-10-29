@@ -5,7 +5,7 @@ var $protobuf = require("../../../minimal");
 
 // Common aliases
 var $Reader = $protobuf.Reader, $Writer = $protobuf.Writer, $util = $protobuf.util;
-var $Object = $util.global.Object, $undefined = $util.global.undefined, $Error = $util.global.Error, $Array = $util.global.Array, $TypeError = $util.global.TypeError, $String = $util.global.String, $Number = $util.global.Number, $parseInt = $util.global.parseInt, $Boolean = $util.global.Boolean, $BigInt = $util.global.BigInt, $isFinite = $util.global.isFinite;
+var $Object = $util.global.Object, $undefined = $util.global.undefined, $Error = $util.global.Error, $RangeError = $util.global.RangeError, $Array = $util.global.Array, $TypeError = $util.global.TypeError, $String = $util.global.String, $Number = $util.global.Number, $parseInt = $util.global.parseInt, $Boolean = $util.global.Boolean, $BigInt = $util.global.BigInt, $isFinite = $util.global.isFinite;
 
 // Exported root namespace
 var $root = $protobuf.roots["test_vector_tile"] || ($protobuf.roots["test_vector_tile"] = {});
@@ -116,7 +116,7 @@ $root.vector_tile = (function() {
          * @returns {$protobuf.Writer} Writer
          */
         Tile.encodeDelimited = function(message, writer) {
-            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
         };
 
         /**
@@ -137,7 +137,17 @@ $root.vector_tile = (function() {
                 _depth = 0;
             if (_depth > $Reader.recursionLimit)
                 throw $Error("max depth exceeded");
-            var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.vector_tile.Tile();
+            var end, message;
+            if (length === $undefined)
+                end = reader.len;
+            else {
+                end = reader.pos + length;
+                if (end > reader.len)
+                    throw $RangeError("index out of range");
+                length = reader.len;
+                reader.len = end;
+            }
+            message = _target || new $root.vector_tile.Tile();
             while (reader.pos < end) {
                 var start = reader.pos;
                 var tag = reader.tag();
@@ -152,7 +162,7 @@ $root.vector_tile = (function() {
                             break;
                         if (!(message.layers && message.layers.length))
                             message.layers = [];
-                        message.layers.push($root.vector_tile.Tile.Layer.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                        message.layers.push($root.vector_tile.Tile.Layer.decode(reader, reader.size(), $undefined, _depth + 1));
                         continue;
                     }
                 }
@@ -161,6 +171,11 @@ $root.vector_tile = (function() {
                     $util.makeProp(message, "$unknowns", false);
                     (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                 }
+            }
+            if (length !== $undefined) {
+                if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                reader.len = length;
             }
             if (_end !== $undefined)
                 throw $Error("missing end group");
@@ -180,7 +195,7 @@ $root.vector_tile = (function() {
         Tile.decodeDelimited = function(reader) {
             if (!(reader instanceof $Reader))
                 reader = new $Reader(reader);
-            return this.decode(reader, reader.uint32());
+            return this.decode(reader, reader.size());
         };
 
         /**
@@ -303,7 +318,7 @@ $root.vector_tile = (function() {
          * @property {number} POLYGON=3 POLYGON value
          */
         Tile.GeomType = (function() {
-            var valuesById = {}, values = $Object.create(valuesById);
+            var valuesById = $Object.create(null), values = $Object.create(valuesById);
             values[valuesById[0] = "UNKNOWN"] = 0;
             values[valuesById[1] = "POINT"] = 1;
             values[valuesById[2] = "LINESTRING"] = 2;
@@ -472,7 +487,7 @@ $root.vector_tile = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             Value.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -493,7 +508,17 @@ $root.vector_tile = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.vector_tile.Tile.Value();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.vector_tile.Tile.Value();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -552,6 +577,11 @@ $root.vector_tile = (function() {
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
                 }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
+                }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
                 return message;
@@ -570,7 +600,7 @@ $root.vector_tile = (function() {
             Value.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -874,20 +904,12 @@ $root.vector_tile = (function() {
                     throw $Error("max depth exceeded");
                 if (message.id != null && $Object.hasOwnProperty.call(message, "id"))
                     writer.uint32(/* id 1, wireType 0 =*/8).uint64(message.id);
-                if (message.tags != null && message.tags.length) {
-                    writer.uint32(/* id 2, wireType 2 =*/18).fork();
-                    for (var i = 0; i < message.tags.length; ++i)
-                        writer.uint32(message.tags[i]);
-                    writer.ldelim();
-                }
+                if (message.tags != null && message.tags.length)
+                    writer.uint32(/* id 2, wireType 2 =*/18).uint32s(message.tags);
                 if (message.type != null && $Object.hasOwnProperty.call(message, "type"))
                     writer.uint32(/* id 3, wireType 0 =*/24).int32(message.type);
-                if (message.geometry != null && message.geometry.length) {
-                    writer.uint32(/* id 4, wireType 2 =*/34).fork();
-                    for (var i = 0; i < message.geometry.length; ++i)
-                        writer.uint32(message.geometry[i]);
-                    writer.ldelim();
-                }
+                if (message.geometry != null && message.geometry.length)
+                    writer.uint32(/* id 4, wireType 2 =*/34).uint32s(message.geometry);
                 if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                     for (var i = 0; i < message.$unknowns.length; ++i)
                         writer.raw(message.$unknowns[i]);
@@ -904,7 +926,7 @@ $root.vector_tile = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             Feature.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -925,7 +947,17 @@ $root.vector_tile = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.vector_tile.Tile.Feature();
+                var end, message, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.vector_tile.Tile.Feature();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -945,9 +977,7 @@ $root.vector_tile = (function() {
                             if (wireType === 2) {
                                 if (!(message.tags && message.tags.length))
                                     message.tags = [];
-                                var end2 = reader.uint32() + reader.pos;
-                                while (reader.pos < end2)
-                                    message.tags.push(reader.uint32());
+                                reader.uint32s(message.tags);
                                 continue;
                             }
                             if (wireType !== 0)
@@ -960,16 +990,20 @@ $root.vector_tile = (function() {
                     case 3: {
                             if (wireType !== 0)
                                 break;
-                            message.type = reader.int32();
+                            value = reader.int32();
+                            if ($root.vector_tile.Tile.GeomType[value] !== $undefined)
+                                message.type = value;
+                            else if (!reader.discardUnknown) {
+                                $util.makeProp(message, "$unknowns", false);
+                                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                            }
                             continue;
                         }
                     case 4: {
                             if (wireType === 2) {
                                 if (!(message.geometry && message.geometry.length))
                                     message.geometry = [];
-                                var end2 = reader.uint32() + reader.pos;
-                                while (reader.pos < end2)
-                                    message.geometry.push(reader.uint32());
+                                reader.uint32s(message.geometry);
                                 continue;
                             }
                             if (wireType !== 0)
@@ -985,6 +1019,11 @@ $root.vector_tile = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -1004,7 +1043,7 @@ $root.vector_tile = (function() {
             Feature.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -1087,12 +1126,6 @@ $root.vector_tile = (function() {
                         message.tags[i] = object.tags[i] >>> 0;
                 }
                 switch (object.type) {
-                default:
-                    if (typeof object.type === "number") {
-                        message.type = object.type;
-                        break;
-                    }
-                    break;
                 case "UNKNOWN":
                 case 0:
                     message.type = 0;
@@ -1109,6 +1142,7 @@ $root.vector_tile = (function() {
                 case 3:
                     message.type = 3;
                     break;
+                default:
                 }
                 if (object.geometry) {
                     if (!$Array.isArray(object.geometry))
@@ -1353,7 +1387,7 @@ $root.vector_tile = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             Layer.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -1374,7 +1408,17 @@ $root.vector_tile = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.vector_tile.Tile.Layer();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.vector_tile.Tile.Layer();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -1401,7 +1445,7 @@ $root.vector_tile = (function() {
                                 break;
                             if (!(message.features && message.features.length))
                                 message.features = [];
-                            message.features.push($root.vector_tile.Tile.Feature.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message.features.push($root.vector_tile.Tile.Feature.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     case 3: {
@@ -1417,7 +1461,7 @@ $root.vector_tile = (function() {
                                 break;
                             if (!(message.values && message.values.length))
                                 message.values = [];
-                            message.values.push($root.vector_tile.Tile.Value.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message.values.push($root.vector_tile.Tile.Value.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     case 5: {
@@ -1432,6 +1476,11 @@ $root.vector_tile = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -1455,7 +1504,7 @@ $root.vector_tile = (function() {
             Layer.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**

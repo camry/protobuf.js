@@ -5,7 +5,7 @@ var $protobuf = require("../../minimal");
 
 // Common aliases
 var $Reader = $protobuf.Reader, $Writer = $protobuf.Writer, $util = $protobuf.util;
-var $Object = $util.global.Object, $undefined = $util.global.undefined, $Error = $util.global.Error, $TypeError = $util.global.TypeError, $String = $util.global.String, $Number = $util.global.Number;
+var $Object = $util.global.Object, $undefined = $util.global.undefined, $Error = $util.global.Error, $RangeError = $util.global.RangeError, $TypeError = $util.global.TypeError, $String = $util.global.String, $Number = $util.global.Number;
 
 // Exported root namespace
 var $root = $protobuf.roots["test_rpc"] || ($protobuf.roots["test_rpc"] = {});
@@ -26,7 +26,7 @@ $root.MyService = (function() {
         $protobuf.rpc.Service.call(this, rpcImpl, requestDelimited, responseDelimited);
     };
 
-    (MyService.prototype = $Object.create($protobuf.rpc.Service.prototype)).constructor = MyService;
+    $Object.defineProperty(MyService.prototype = $Object.create($protobuf.rpc.Service.prototype), "constructor", { value: MyService, writable: true, enumerable: false, configurable: true });
 
     /**
      * Creates new MyService service using the specified rpc implementation.
@@ -163,7 +163,7 @@ $root.MyRequest = (function() {
             _depth = 0;
         if (_depth > $util.recursionLimit)
             throw $Error("max depth exceeded");
-        if (message.path != null && $Object.hasOwnProperty.call(message, "path"))
+        if (message.path != null && $Object.hasOwnProperty.call(message, "path") && message.path !== "")
             writer.uint32(/* id 1, wireType 2 =*/10).string(message.path);
         if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
             for (var i = 0; i < message.$unknowns.length; ++i)
@@ -181,7 +181,7 @@ $root.MyRequest = (function() {
      * @returns {$protobuf.Writer} Writer
      */
     MyRequest.encodeDelimited = function(message, writer) {
-        return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+        return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
     };
 
     /**
@@ -202,7 +202,17 @@ $root.MyRequest = (function() {
             _depth = 0;
         if (_depth > $Reader.recursionLimit)
             throw $Error("max depth exceeded");
-        var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.MyRequest(), value;
+        var end, message, value;
+        if (length === $undefined)
+            end = reader.len;
+        else {
+            end = reader.pos + length;
+            if (end > reader.len)
+                throw $RangeError("index out of range");
+            length = reader.len;
+            reader.len = end;
+        }
+        message = _target || new $root.MyRequest();
         while (reader.pos < end) {
             var start = reader.pos;
             var tag = reader.tag();
@@ -228,6 +238,11 @@ $root.MyRequest = (function() {
                 (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
             }
         }
+        if (length !== $undefined) {
+            if (reader.pos !== end)
+                throw $RangeError("index out of range");
+            reader.len = length;
+        }
         if (_end !== $undefined)
             throw $Error("missing end group");
         return message;
@@ -246,7 +261,7 @@ $root.MyRequest = (function() {
     MyRequest.decodeDelimited = function(reader) {
         if (!(reader instanceof $Reader))
             reader = new $Reader(reader);
-        return this.decode(reader, reader.uint32());
+        return this.decode(reader, reader.size());
     };
 
     /**
@@ -423,7 +438,7 @@ $root.MyResponse = (function() {
             _depth = 0;
         if (_depth > $util.recursionLimit)
             throw $Error("max depth exceeded");
-        if (message.status != null && $Object.hasOwnProperty.call(message, "status"))
+        if (message.status != null && $Object.hasOwnProperty.call(message, "status") && message.status !== 0)
             writer.uint32(/* id 2, wireType 0 =*/16).int32(message.status);
         if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
             for (var i = 0; i < message.$unknowns.length; ++i)
@@ -441,7 +456,7 @@ $root.MyResponse = (function() {
      * @returns {$protobuf.Writer} Writer
      */
     MyResponse.encodeDelimited = function(message, writer) {
-        return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+        return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
     };
 
     /**
@@ -462,7 +477,17 @@ $root.MyResponse = (function() {
             _depth = 0;
         if (_depth > $Reader.recursionLimit)
             throw $Error("max depth exceeded");
-        var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.MyResponse(), value;
+        var end, message, value;
+        if (length === $undefined)
+            end = reader.len;
+        else {
+            end = reader.pos + length;
+            if (end > reader.len)
+                throw $RangeError("index out of range");
+            length = reader.len;
+            reader.len = end;
+        }
+        message = _target || new $root.MyResponse();
         while (reader.pos < end) {
             var start = reader.pos;
             var tag = reader.tag();
@@ -488,6 +513,11 @@ $root.MyResponse = (function() {
                 (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
             }
         }
+        if (length !== $undefined) {
+            if (reader.pos !== end)
+                throw $RangeError("index out of range");
+            reader.len = length;
+        }
         if (_end !== $undefined)
             throw $Error("missing end group");
         return message;
@@ -506,7 +536,7 @@ $root.MyResponse = (function() {
     MyResponse.decodeDelimited = function(reader) {
         if (!(reader instanceof $Reader))
             reader = new $Reader(reader);
-        return this.decode(reader, reader.uint32());
+        return this.decode(reader, reader.size());
     };
 
     /**

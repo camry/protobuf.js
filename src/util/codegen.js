@@ -64,7 +64,9 @@ function codegen(functionParams, functionName) {
         formatStringOrScope = formatStringOrScope.replace(/%([%dfijs])/g, function replace($0, $1) {
             var value = formatParams[formatOffset++];
             switch ($1) {
-                case "d": case "f": return String(Number(value));
+                case "d": case "f":
+                    value = Number(value);
+                    return Object.is(value, -0) ? "-0" : String(value);
                 case "i": return String(Math.floor(value));
                 case "j": return JSON.stringify(value);
                 case "s": return String(value);
@@ -81,7 +83,12 @@ function codegen(functionParams, functionName) {
         return "function " + safeFunctionName(functionNameOverride || functionName) + "(" + (functionParams && functionParams.join(",") || "") + "){\n  " + body.join("\n  ") + "\n}";
     }
 
-    Codegen.toString = toString;
+    Object.defineProperty(Codegen, "toString", {
+        value: toString,
+        writable: true,
+        enumerable: true,
+        configurable: true
+    });
     return Codegen;
 }
 

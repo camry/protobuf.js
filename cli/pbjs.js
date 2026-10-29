@@ -2,13 +2,13 @@
 var path     = require("path"),
     fs       = require("fs"),
     minimist = require("minimist"),
-    chalk    = require("chalk"),
     pkg      = require("./package.json"),
     util     = require("./util"),
     glob     = require("glob"),
     protobuf = require("protobufjs");
 
 var targets  = util.requireAll("./targets");
+var color    = util.color;
 
 var lintDefault = "eslint-disable " + [
     "block-scoped-var",
@@ -86,6 +86,10 @@ function normalizeOptions(options) {
     return options;
 }
 
+function getTarget(name) {
+    return Object.prototype.hasOwnProperty.call(targets, name) ? targets[name] : null;
+}
+
 /**
  * Generates JavaScript and optional TypeScript declarations from a root.
  * @param {Root} root Reflected root
@@ -96,7 +100,7 @@ function normalizeOptions(options) {
  */
 exports.generate = function generate(root, options, callback) {
     options = normalizeOptions(options);
-    var target = targets[options.target];
+    var target = getTarget(options.target);
     if (!target) {
         // Require custom target
         try {
@@ -129,7 +133,10 @@ function deriveDtsPath(out) {
 
 function generateDts(root, argv, output, done) {
     function runPbts(jsOutput) {
-        var pbtsArgs = [];
+        var pbtsArgs = [],
+            target = getTarget(argv.target);
+        if (target && target.getDependency)
+            pbtsArgs.push("--import", "\\$protobuf=" + target.getDependency(argv));
         if (argv.target === "json-module")
             pbtsArgs.push("--no-constructor");
         if (!argv.comments)
@@ -182,7 +189,7 @@ function sparsify(root, mainFiles) {
     // 2. empty unreferenced objects
     util.traverse(root, function(obj) {
         var parent = obj.parent;
-        if (!parent || obj.referenced) // root or referenced
+        if (!parent || obj.referenced || obj.declaringField) // root, referenced or synthetic extension field
             return;
         // remove unreferenced namespaces
         if (obj instanceof protobuf.Namespace) {
@@ -221,6 +228,9 @@ exports.main = function main(args, callback) {
     var files  = argv._,
         paths  = typeof argv.path === "string" ? [ argv.path ] : argv.path || [];
 
+    if (!paths.length)
+        paths.push(".");
+
     // protobuf.js package directory contains additional, otherwise non-bundled google types
     paths.push(path.relative(process.cwd(), path.join(__dirname, "../protobufjs")) || ".");
 
@@ -234,7 +244,7 @@ exports.main = function main(args, callback) {
             process.stderr.write([
                 "protobuf.js v" + pkg.version + " CLI for JavaScript",
                 "",
-                chalk.bold.white("Translates between file formats and generates static code."),
+                color.bold + color.white + "Translates between file formats and generates static code." + color.reset,
                 "",
                 "  -t, --target     Specifies the target format. Also accepts a path to require a custom target.",
                 "",
@@ -251,7 +261,7 @@ exports.main = function main(args, callback) {
                 "",
                 "  --sparse         Exports only those types referenced from a main file (experimental).",
                 "",
-                chalk.bold.gray("  Module targets only:"),
+                color.bold + color.gray + "  Module targets only:" + color.reset,
                 "",
                 "  -w, --wrap       Specifies the wrapper to use. Also accepts a path to require a custom wrapper.",
                 "",
@@ -271,12 +281,12 @@ exports.main = function main(args, callback) {
                 "",
                 "  --es6            Enables ES6 syntax (const/let instead of var)",
                 "",
-                chalk.bold.gray("  Proto sources only:"),
+                color.bold + color.gray + "  Proto sources only:" + color.reset,
                 "",
                 "  --keep-case      Keeps field casing instead of converting to camel case.",
                 "  --alt-comment    Turns on an alternate comment parsing mode that preserves more comments.",
                 "",
-                chalk.bold.gray("  Static targets only:"),
+                color.bold + color.gray + "  Static targets only:" + color.reset,
                 "",
                 "  --no-create      Does not generate create functions used for reflection compatibility.",
                 "  --no-encode      Does not generate encode functions.",
@@ -296,7 +306,7 @@ exports.main = function main(args, callback) {
                 "  --null-defaults  Default value for optional fields is null instead of zero value.",
                 "  --null-semantics Make nullable fields match protobuf semantics (overrides --null-defaults).",
                 "",
-                "usage: " + chalk.bold.green("pbjs") + " [options] file1.proto file2.json ..." + chalk.gray("  (or pipe)  ") + "other | " + chalk.bold.green("pbjs") + " [options] -",
+                "usage: " + color.bold + color.green + "pbjs" + color.reset + " [options] file1.proto file2.json ..." + color.gray + "  (or pipe)  " + color.reset + "other | " + color.bold + color.green + "pbjs" + color.reset + " [options] -",
                 ""
             ].join("\n"));
         return 1;

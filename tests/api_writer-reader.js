@@ -5,6 +5,36 @@ var protobuf = require("..");
 var Writer = protobuf.Writer,
     Reader = protobuf.Reader;
 
+tape.test("reader length prefixes", function(test) {
+    [ 0, 127, 128, 16384, 2097152, 268435456, 2147483647 ].forEach(function(value) {
+        test.equal(Reader.create(Writer.create().uint32(value).finish()).size(), value, "accepts length " + value);
+    });
+    test.equal(Reader.create([ 128, 128, 128, 128, 0 ]).size(), 0, "accepts a non-minimal length within five bytes");
+
+    [
+        [ 128, 128, 128, 128, 8 ],
+        [ 128, 128, 128, 128, 16 ],
+        [ 128, 128, 128, 128, 128, 0 ]
+    ].forEach(function(bytes) {
+        test.throws(function() {
+            Reader.create(bytes).size();
+        }, /invalid length encoding/, "rejects an overflowing or overlong length");
+    });
+    test.equal(Reader.create([ 128, 128, 128, 128, 16 ]).uint32(), 0, "retains scalar uint32 truncation");
+    test.throws(function() {
+        Reader.create([ 128, 128, 128, 128 ]).size();
+    }, RangeError, "rejects a truncated length");
+
+    [ Uint8Array, protobuf.util.Buffer ].filter(Boolean).forEach(function(BufferType) {
+        [ "bytes", "string", "stringVerify" ].forEach(function(method) {
+            test.throws(function() {
+                Reader.create(BufferType.from([ 128, 128, 128, 128, 16 ]))[method]();
+            }, /invalid length encoding/, BufferType.name + "." + method + " rejects an overflowing length");
+        });
+    });
+    test.end();
+});
+
 tape.test("writer & reader", function(test) {
 
     test.throws(function() {
@@ -165,7 +195,7 @@ tape.test("writer & reader", function(test) {
         var w3 = Writer.create();
         w3.uint32(100).string("hello").bool(true);
         var offset = 3;
-        var buf3 = new Uint8Array(offset + w3.len);
+        var buf3 = new Uint8Array(offset + w3.pos);
         for (var i = 0; i < offset; ++i)
             buf3[i] = 99;
         w3.finishInto(buf3, offset);
@@ -175,6 +205,31 @@ tape.test("writer & reader", function(test) {
         for (var i = 0; i < expected.length; ++i)
             test.equal(buf3[offset + i], expected[i], "byte at offset+" + i + " matches finish()");
 
+        test.end();
+    });
+
+    test.test(test.name + " - finish size", function(test) {
+        var buf = Writer.create().uint32(1).finish();
+
+        test.equal(buf.length, 1, "should expose only written bytes");
+        test.equal(buf.byteLength, 1, "should have the written byte length");
+        test.same(Array.prototype.slice.call(buf), [ 1 ], "should contain written bytes");
+        test.end();
+    });
+
+    test.test(test.name + " - shared finish view", function(test) {
+        var writer = Writer.create().uint32(1);
+        var shared = writer.finish(true);
+
+        test.equal(shared.length, 1, "should expose only written bytes");
+        test.same(Array.prototype.slice.call(shared), [ 1 ], "should contain written bytes");
+
+        shared[0] = 2;
+        test.equal(writer.buf[0], 2, "should share the writer's backing buffer");
+
+        var copied = writer.finish();
+        copied[0] = 3;
+        test.equal(writer.buf[0], 2, "default finish should return an independent buffer");
         test.end();
     });
 

@@ -345,6 +345,18 @@ function globalRef(name) {
     return "$" + name;
 }
 
+function floatDefaultLiteral(value) {
+    if (Object.is(value, -0))
+        return "-0";
+    if (value === Infinity)
+        return globalRef("Infinity");
+    if (value === -Infinity)
+        return "-" + globalRef("Infinity");
+    if (Number.isNaN(value))
+        return globalRef("NaN");
+    return JSON.stringify(value);
+}
+
 function isIdentifierReference(node, parent) {
     if (!parent)
         return true;
@@ -442,6 +454,15 @@ function buildFunction(type, functionName, gen, scope) {
              && node.object.object.type === "Identifier" && node.object.object.name === "types"
              && node.object.property.type === "Literal"
              && node.property.type === "Identifier" && node.property.name === "values"
+            )
+                return rootMemberRef(type.fieldsArray[node.object.property.value].resolvedType);
+            // replace types[N].valuesById with the field's actual enum object
+            if (
+                node.type === "MemberExpression"
+             && node.object.type === "MemberExpression"
+             && node.object.object.type === "Identifier" && node.object.object.name === "types"
+             && node.object.property.type === "Literal"
+             && node.property.type === "Identifier" && node.property.name === "valuesById"
             )
                 return rootMemberRef(type.fieldsArray[node.object.property.value].resolvedType);
             // replace types[N] with the field's actual type
@@ -788,7 +809,10 @@ function buildType(ref, type) {
                 + ") : " + field.typeDefault.toNumber(field.type === "uint64" || field.type === "fixed64") + ";");
         else if (field.bytes) {
             push(escapeName(type.name) + ".prototype" + prop + " = $util.newBuffer(" + JSON.stringify(Array.prototype.slice.call(field.typeDefault)) + ");");
-        } else
+        } else if ((field.type === "double" || field.type === "float") && typeof field.typeDefault === "number"
+                && (!isFinite(field.typeDefault) || Object.is(field.typeDefault, -0)))
+            push(escapeName(type.name) + ".prototype" + prop + " = " + floatDefaultLiteral(field.typeDefault) + ";");
+        else
             push(escapeName(type.name) + ".prototype" + prop + " = " + JSON.stringify(field.typeDefault) + ";");
     });
 
@@ -871,7 +895,7 @@ function buildType(ref, type) {
             ]);
             push(escapeName(type.name) + ".encodeDelimited = function(message, writer) {");
             ++indent;
-            push("return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();");
+            push("return this.encode(message, (writer || $Writer.create()).fork()).ldelim();");
             --indent;
             push("};");
         }
@@ -910,7 +934,7 @@ function buildType(ref, type) {
                 ++indent;
                     push("reader = new $Reader(reader);");
                 --indent;
-                push("return this.decode(reader, reader.uint32());");
+                push("return this.decode(reader, reader.size());");
             --indent;
             push("};");
         }
@@ -1010,7 +1034,7 @@ function buildService(ref, service) {
     --indent;
     push("};");
     push("");
-    push("(" + escapeName(service.name) + ".prototype = " + globalRef("Object") + ".create($protobuf.rpc.Service.prototype)).constructor = " + escapeName(service.name) + ";");
+    push(globalRef("Object") + ".defineProperty(" + escapeName(service.name) + ".prototype = " + globalRef("Object") + ".create($protobuf.rpc.Service.prototype), \"constructor\", { value: " + escapeName(service.name) + ", writable: true, enumerable: false, configurable: true });");
 
     if (config.create) {
         push("");
@@ -1103,7 +1127,7 @@ function buildEnum(ref, enm) {
     else
         push(escapeName(ref) + "." + escapeName(enm.name) + " = (function() {");
     ++indent;
-        push((config.es6 ? "const" : "var") + " valuesById = {}, values = " + globalRef("Object") + ".create(valuesById);");
+        push((config.es6 ? "const" : "var") + " valuesById = " + globalRef("Object") + ".create(null), values = " + globalRef("Object") + ".create(valuesById);");
         var aliased = [];
         Object.keys(enm.values).forEach(function(key) {
             var valueId = enm.values[key];

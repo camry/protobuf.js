@@ -26,6 +26,33 @@ tape.test("uncommon statements", function(test) {
     });
 });
 
+tape.test("numeric defaults", function(test) {
+    var Type = protobuf.parse("syntax = \"proto2\";\
+        message M {\
+            optional float float_value = 1 [default = -0];\
+            optional double double_value = 2 [default = -0];\
+            optional double zero_value = 3 [default = 0];\
+            optional int32 int_value = 4 [default = -0];\
+            optional int32 hex_int_value = 5 [default = -0x0];\
+        }").root.lookupType("M");
+
+    Type.resolveAll();
+    test.ok(Object.is(Type.fields.floatValue.defaultValue, -0), "should preserve a negative zero float default");
+    test.ok(Object.is(Type.fields.doubleValue.defaultValue, -0), "should preserve a negative zero double default");
+    test.ok(Object.is(Type.fields.zeroValue.defaultValue, 0), "should preserve a positive zero default");
+    test.ok(Object.is(Type.fields.intValue.defaultValue, 0), "should normalize a negative integer zero default");
+    test.ok(Object.is(Type.fields.hexIntValue.defaultValue, 0), "should normalize a negative hexadecimal zero default");
+    var Enum = protobuf.parse("syntax = \"proto3\"; enum E { ZERO = -0; }").root.lookupEnum("E");
+    test.ok(Object.is(Enum.values.ZERO, 0), "should normalize a negative zero enum value");
+    test.throws(function() {
+        protobuf.parse("syntax = \"proto2\"; message M { optional uint32 value = 1 [default = -0]; }");
+    }, /illegal integer '-0'/, "should reject a negative unsigned default");
+    test.throws(function() {
+        protobuf.parse("syntax = \"proto2\"; message M { optional int32 value = 1 [default = 1.5]; }");
+    }, /illegal integer '1\.5'/, "should reject a non-integer default");
+    test.end();
+});
+
 tape.test("negative enum reserved values", function(test) {
     test.doesNotThrow(function() {
         var Enum = protobuf.parse("syntax = \"proto3\"; enum Values { reserved -1; INVALID = 0; OK = 1; }").root.lookupEnum("Values");
@@ -47,6 +74,27 @@ tape.test("negative enum reserved values", function(test) {
     test.throws(function() {
         protobuf.parse("syntax = \"proto3\"; message M { reserved -1; int32 value = 1; }");
     }, /illegal id '-1'/, "should still reject negative message reserved field ids");
+
+    test.end();
+});
+
+tape.test("enum declarations are order-independent", function(test) {
+    var Enum = protobuf.parse("syntax = \"proto3\"; enum Values { INVALID = 0; UNKNOWN = 0; option allow_alias = true; OK = 1; }").root.lookupEnum("Values");
+    test.same(Object.keys(Enum.values).map(function(name) {
+        return [name, Enum.values[name]];
+    }), [
+        ["INVALID", 0],
+        ["UNKNOWN", 0],
+        ["OK", 1]
+    ], "should allow aliases declared before allow_alias");
+
+    test.throws(function() {
+        protobuf.parse("syntax = \"proto3\"; enum Values { INVALID = 0; UNKNOWN = 0; option allow_alias = false; }");
+    }, /duplicate id 0/, "should reject aliases when allow_alias is false");
+
+    test.throws(function() {
+        protobuf.parse("syntax = \"proto3\"; enum Values { INVALID = 0; RESERVED = 1; reserved 1; }");
+    }, /id 1 is reserved/, "should apply reserved declarations to preceding values");
 
     test.end();
 });
@@ -177,3 +225,30 @@ tape.test("parser nesting", function(test) {
     test.end();
 });
 
+tape.test("EOF / truncated input", function(test) {
+    function throwsIllegalNotTypeError(source, message) {
+        test.throws(function() {
+            try {
+                protobuf.parse(source);
+            } catch (err) {
+                test.notEqual(err && err.name, "TypeError", message + " should not throw TypeError");
+                throw err;
+            }
+        }, /illegal/, message);
+    }
+
+    throwsIllegalNotTypeError("message M { repeated int32 f = ", "should reject missing field id");
+    throwsIllegalNotTypeError("message M { repeated ", "should reject missing field type");
+    throwsIllegalNotTypeError("message M { repeated int32", "should reject missing field name");
+    throwsIllegalNotTypeError("message ", "should reject missing message type name");
+    throwsIllegalNotTypeError("message M { oneof ", "should reject missing oneof name");
+    throwsIllegalNotTypeError("message M { optional group ", "should reject missing group name");
+    throwsIllegalNotTypeError("message M { map<string, Foo> ", "should reject missing map field name");
+    throwsIllegalNotTypeError("enum ", "should reject missing enum name");
+    throwsIllegalNotTypeError("service ", "should reject missing service name");
+    throwsIllegalNotTypeError("extend ", "should reject missing extend reference");
+    throwsIllegalNotTypeError("package ", "should reject missing package name");
+    throwsIllegalNotTypeError("message M { reserved ", "should reject missing reserved range");
+    throwsIllegalNotTypeError("message M { optional Foo.", "should reject truncated dotted field type");
+    test.end();
+});

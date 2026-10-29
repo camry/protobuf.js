@@ -99,11 +99,11 @@ tape.test("proto3 implicit scalar conversion defaults", function(test) {
         return Array.prototype.slice.call(Message.encode(message).finish());
     }
 
-    test.same(encode({ regularInt32: 0 }), [8, 0], "should preserve direct int32 default values");
-    test.same(encode({ regularString: "" }), [34, 0], "should preserve direct string default values");
-    test.same(encode({ regularBytes: "" }), [42, 0], "should preserve direct bytes default values");
-    test.same(encode({ regularBool: false }), [56, 0], "should preserve direct bool default values");
-    test.same(encode({ regularEnum: 0 }), [72, 0], "should preserve direct enum default values");
+    test.same(encode({ regularInt32: 0 }), [], "should omit direct int32 default values");
+    test.same(encode({ regularString: "" }), [], "should omit direct string default values");
+    test.same(encode({ regularBytes: "" }), [], "should omit direct bytes default values");
+    test.same(encode({ regularBool: false }), [], "should omit direct bool default values");
+    test.same(encode({ regularEnum: 0 }), [], "should omit direct enum default values");
 
     test.same(encode(Message.fromObject({ regularInt32: "0" })), [], "should omit converted int32 defaults");
     test.same(encode(Message.fromObject({ regularString: "" })), [], "should omit converted string defaults");
@@ -111,6 +111,28 @@ tape.test("proto3 implicit scalar conversion defaults", function(test) {
     test.same(encode(Message.fromObject({ regularInt64: { low: 0, high: 0 } })), [], "should omit converted int64 defaults");
     test.same(encode(Message.fromObject({ regularBool: false })), [], "should omit converted bool defaults");
     test.same(encode(Message.fromObject({ regularEnum: "ZERO" })), [], "should omit converted enum defaults");
+
+    test.end();
+});
+
+tape.test("proto3 implicit scalar defaults without an explicit resolveAll", function(test) {
+    // parse().root builds its codecs lazily via setup(); it must omit
+    // implicit-presence defaults the same way load()/fromJSON() do (those
+    // resolveAll internally), instead of requiring a manual resolveAll first.
+    var root = protobuf.parse(proto).root;
+
+    var Message = root.lookupType("Message");
+
+    function encode(message) {
+        return Array.prototype.slice.call(Message.encode(message).finish());
+    }
+
+    test.same(encode({ regularInt32: 0 }), [], "should omit default int32");
+    test.same(encode({ regularString: "" }), [], "should omit default string");
+    test.same(encode({ regularBool: false }), [], "should omit default bool");
+    test.same(encode({ regularEnum: 0 }), [], "should omit default enum");
+    test.same(encode({ regularInt32: 5 }), [8, 5], "should still emit non-default values");
+    test.same(encode({ optionalInt32: 0 }), [16, 0], "should still emit proto3 optional presence");
 
     test.end();
 });

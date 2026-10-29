@@ -91,6 +91,15 @@ function invalid(name, value, what) {
     return Error(name + ": " + what + ": " + JSON.stringify(value));
 }
 
+function normalizeIntegerString(str, name, what) {
+    str = str.replace(/^\+/, "").replace(/^(-?)0+(?=\d)/, "$1");
+    if (str === "-0")
+        str = "0";
+    if (str.length > 20) // max uint64 and min int64
+        throw Error(name + ": out of range for " + what);
+    return str;
+}
+
 function parseIntegerString(value, type, name) {
     var str;
     if (typeof value === "number") {
@@ -113,6 +122,7 @@ function parseIntegerString(value, type, name) {
         throw invalid(name, value, "expected integer (number or string)");
 
     var range = INT_RANGE[type];
+    str = normalizeIntegerString(str, name, type);
     if (LONG_TYPE[type]) {
         if (hasBigInt) {
             var big = BigInt(str);
@@ -128,17 +138,17 @@ function parseMapIntegerKey(key, type, name) {
     var unsigned = type === "uint32" || type === "fixed32" || type === "uint64" || type === "fixed64";
     if (!(unsigned ? /^[0-9]+$/ : /^-?[0-9]+$/).test(key))
         throw invalid(name, key, "invalid " + type + " map key");
+    var range = INT_RANGE[type];
+    key = normalizeIntegerString(key, name, type + " map key");
     if (hasBigInt) {
-        var big = BigInt(key),
-            range = INT_RANGE[type];
+        var big = BigInt(key);
         if (big < BigInt(range[0]) || big > BigInt(range[1]))
             throw invalid(name, key, "out of range for " + type + " map key");
         return big.toString();
     }
     parseIntegerString(key, type, name);
     if (LONG_TYPE[type]) {
-        var normalized = key.replace(/^-?0+(?=\d)/, key.charAt(0) === "-" ? "-" : "");
-        return normalized === "-0" ? "0" : normalized;
+        return key;
     }
     return String(Number(key));
 }
@@ -231,18 +241,28 @@ function readScalar(type, value, name) {
     }
 }
 
+function enumJsonName(enm, name) {
+    var options = hasOwn(enm.valuesOptions, name) && enm.valuesOptions[name];
+    return hasOwn(options, "(pb.enumvalue.json).string") ? options["(pb.enumvalue.json).string"] : undefined;
+}
+
 function readEnum(enm, value, name, options) {
     if (typeof value === "string") {
-        var num = enm.values[value];
-        if (num !== undefined)
-            return num;
+        if (hasOwn(enm.values, value))
+            return enm.values[value];
+        if (enm.valuesOptions)
+            for (var names = Object.keys(enm.valuesOptions), i = 0; i < names.length; ++i)
+                if (hasOwn(enm.values, names[i]) && enumJsonName(enm, names[i]) === value)
+                    return enm.values[names[i]];
         if (options.ignoreUnknownFields)
             return SKIP;
         throw invalid(name, value, "unknown enum value");
     }
     if (typeof value === "number") {
-        if (!isFinite(value) || Math.floor(value) !== value)
+        if ((value | 0) !== value)
             throw invalid(name, value, "invalid enum number");
+        if (enm._features.enum_type === "CLOSED" && enm.valuesById[value] === undefined)
+            throw invalid(name, value, "unknown enum value");
         return value;
     }
     if (value === null && enm.fullName === ".google.protobuf.NullValue")
@@ -293,7 +313,7 @@ function readField(field, value, options, depth) {
             throw invalid(field.fullName, value, "expected array");
         var arr = [], i = 0;
         for (; i < value.length; ++i) {
-            if (value[i] === null && !isValueType(field.resolvedType))
+            if (value[i] === null && !isValueType(field.resolvedType) && !isNullValueType(field.resolvedType))
                 throw invalid(field.fullName, null, "null element");
             var el = readSingular(field, value[i], options, depth);
             if (el !== SKIP)
@@ -314,6 +334,10 @@ function readSingular(field, value, options, depth) {
 
 function isValueType(type) {
     return type instanceof Type && type.fullName === ".google.protobuf.Value";
+}
+
+function isNullValueType(type) {
+    return type instanceof Enum && type.fullName === ".google.protobuf.NullValue";
 }
 
 function isImplicitDefault(field, value) {
@@ -432,7 +456,10 @@ function writeSingular(field, value, options, depth) {
         if (field.resolvedType.fullName === ".google.protobuf.NullValue")
             return null;
         var name = field.resolvedType.valuesById[value];
-        return name === undefined ? value : name;
+        if (name === undefined)
+            return value;
+        var jsonName = enumJsonName(field.resolvedType, name);
+        return jsonName === undefined ? name : jsonName;
     }
     return writeScalar(field.type, value);
 }
@@ -535,7 +562,12 @@ WKT_FROM[".google.protobuf.Duration"] = function (type, value) {
         nanos = match[3] ? fracToNanos(match[3]) * sign || 0 : 0;
     if (seconds > 315576000000 || seconds < -315576000000)
         throw invalid(type.fullName, value, "duration out of range");
-    return { seconds: seconds, nanos: nanos };
+    var message = {};
+    if (seconds !== 0)
+        message.seconds = seconds;
+    if (nanos !== 0)
+        message.nanos = nanos;
+    return message;
 };
 WKT_TO[".google.protobuf.Duration"] = function (type, message) {
     var seconds = longToNumber(message.seconds),
@@ -568,7 +600,12 @@ WKT_FROM[".google.protobuf.Timestamp"] = function (type, value) {
         nanos = match[7] ? fracToNanos(match[7]) : 0;
     if (seconds < -62135596800 || seconds > 253402300799)
         throw invalid(type.fullName, value, "timestamp out of range");
-    return { seconds: seconds, nanos: nanos };
+    var message = {};
+    if (seconds !== 0)
+        message.seconds = seconds;
+    if (nanos !== 0)
+        message.nanos = nanos;
+    return message;
 };
 WKT_TO[".google.protobuf.Timestamp"] = function (type, message) {
     var seconds = longToNumber(message.seconds),
@@ -611,10 +648,17 @@ WKT_TO[".google.protobuf.FieldMask"] = function (type, message) {
  "UInt32Value", "BoolValue", "StringValue", "BytesValue"].forEach(function (name) {
     var fullName = ".google.protobuf." + name;
     WKT_FROM[fullName] = function (type, value, options, depth) {
-        return { value: readSingular(type.fields.value.resolve(), value, options, depth) };
+        var field = type.fields.value.resolve(),
+            fieldValue = readSingular(field, value, options, depth),
+            message = {};
+        if (!isImplicitDefault(field, fieldValue))
+            message.value = fieldValue;
+        return message;
     };
     WKT_TO[fullName] = function (type, message, options, depth) {
-        return writeSingular(type.fields.value.resolve(), message.value, options, depth);
+        var field = type.fields.value.resolve(),
+            value = wktFieldValue(type, message, "value");
+        return writeSingular(field, value === undefined ? field.defaultValue : value, options, depth);
     };
 });
 
@@ -736,7 +780,9 @@ WKT_FROM[".google.protobuf.Any"] = function (type, value, options, depth) {
     if (url.indexOf("/") === -1)
         url = "/" + url;
     out[wktFieldName(type, "type_url")] = url;
-    out[wktFieldName(type, "value")] = msgType.encode(inner).finish();
+    var bytes = msgType.encode(inner).finish();
+    if (bytes.length)
+        out[wktFieldName(type, "value")] = bytes;
     return out;
 };
 WKT_TO[".google.protobuf.Any"] = function (type, message, options, depth) {
@@ -745,7 +791,8 @@ WKT_TO[".google.protobuf.Any"] = function (type, message, options, depth) {
         return {};
     var name = typeUrl.substring(typeUrl.lastIndexOf("/") + 1),
         msgType = type.root.lookupType(name),
-        decoded = msgType.decode(wktFieldValue(type, message, "value")),
+        value = wktFieldValue(type, message, "value"),
+        decoded = msgType.decode(value || util.emptyArray),
         body = toJsonValue(msgType, decoded, options, depth + 1),
         result;
     if (WKT_TO[msgType.fullName])

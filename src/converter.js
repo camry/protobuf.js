@@ -15,31 +15,33 @@ var Enum  = require("./enum"),
  * @param {Field} field Reflected field
  * @param {number} fieldIndex Field index
  * @param {string} prop Property reference
+ * @param {string} [dstProp] Repeated destination property reference
  * @returns {Codegen} Codegen instance
  * @ignore
  */
-function genValuePartial_fromObject(gen, field, fieldIndex, prop) {
-    var defaultAlreadyEmitted = false;
+function genValuePartial_fromObject(gen, field, fieldIndex, prop, dstProp) {
     /* eslint-disable no-unexpected-multiline, block-scoped-var, no-redeclare */
     if (field.resolvedType) {
-        if (field.resolvedType instanceof Enum) { gen
+        if (field.resolvedType instanceof Enum) {
+            var dst = dstProp
+                ? "m" + dstProp + "[m" + dstProp + ".length]"
+                : "m" + prop;
+            gen
             ("switch(d%s){", prop);
-            for (var values = field.resolvedType.values, keys = Object.keys(values), i = 0; i < keys.length; ++i) {
-                // enum unknown values passthrough
-                if (values[keys[i]] === field.typeDefault && !defaultAlreadyEmitted) { gen
-                    ("default:")
-                        ("if(typeof d%s===\"number\"){m%s=d%s;break}", prop, prop, prop);
-                    if (!field.repeated) gen // fallback to default value only for
-                                             // arrays, to avoid leaving holes.
-                        ("break");           // for non-repeated fields, just ignore
-                    defaultAlreadyEmitted = true;
-                }
-                gen
+            for (var values = field.resolvedType.values, keys = Object.keys(values), i = 0; i < keys.length; ++i) { gen
                 ("case%j:", keys[i])
                 ("case %i:", values[keys[i]])
-                    ("m%s=%j", prop, values[keys[i]])
+                    ("%s=%j", dst, values[keys[i]])
                     ("break");
-            } gen
+            }
+            gen
+                ("default:");
+            if (field.resolvedType._features.enum_type !== "CLOSED") {
+                gen
+                    ("if(typeof d%s===\"number\"&&(d%s|0)===d%s)", prop, prop, prop)
+                        ("%s=d%s", dst, prop);
+            }
+            gen
             ("}");
         } else gen
             ("if(!util.isObject(d%s))", prop)
@@ -142,10 +144,14 @@ converter.fromObject = function fromObject(mtype) {
         } else if (field.repeated) { gen
     ("if(d%s){", prop)
         ("if(!Array.isArray(d%s))", prop)
-            ("throw TypeError(%j)", field.fullName + ": array expected")
-        ("m%s=Array(d%s.length)", prop, prop)
+            ("throw TypeError(%j)", field.fullName + ": array expected");
+            if (field.resolvedType instanceof Enum) gen
+        ("m%s=[]", prop);
+            else gen
+        ("m%s=Array(d%s.length)", prop, prop);
+            gen
         ("for(var i=0;i<d%s.length;++i){", prop);
-            genValuePartial_fromObject(gen, field, /* not sorted */ i, prop + "[i]")
+            genValuePartial_fromObject(gen, field, /* not sorted */ i, prop + "[i]", field.resolvedType instanceof Enum ? prop : undefined)
         ("}")
     ("}");
 
@@ -162,6 +168,8 @@ converter.fromObject = function fromObject(mtype) {
     ("if(d%s.length){", prop);
                 else if (field.type === "bool") gen
     ("if(d%s){", prop);
+                else if (field.type === "double" || field.type === "float") gen
+    ("if(!Object.is(Number(d%s),0)){", prop);
                 else if (types.long[field.type] !== undefined) gen
     ("if(typeof d%s===\"object\"?d%s.low||d%s.high:Number(d%s)!==0){", prop, prop, prop, prop);
                 else gen
@@ -290,12 +298,16 @@ converter.toObject = function toObject(mtype) {
             else if (field.bytes) {
                 var arrayDefault = Array.prototype.slice.call(field.typeDefault);
                 gen
-        ("if(o.bytes===String)d%s=%j", prop, String.fromCharCode.apply(String, field.typeDefault))
+        ("if(o.bytes===String)d%s=%j", prop, util.base64.encode(field.typeDefault, 0, field.typeDefault.length))
         ("else{")
             ("d%s=%j", prop, arrayDefault)
             ("if(o.bytes!==Array)d%s=util.newBuffer(d%s)", prop, prop)
         ("}");
-            } else gen
+            } else if ((field.type === "double" || field.type === "float") && typeof field.typeDefault === "number"
+                    && (!isFinite(field.typeDefault) || Object.is(field.typeDefault, -0))) gen
+        ("d%s=%f", prop, field.typeDefault)
+        ("if(o.json&&!isFinite(d%s))d%s=String(d%s)", prop, prop, prop);
+            else gen
         ("d%s=%j", prop, field.typeDefault); // also messages (=null)
         } gen
     ("}");

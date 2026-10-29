@@ -10,10 +10,11 @@ var Root; // cyclic
 
 /* eslint-disable no-warning-comments */
 // TODO: Replace with embedded proto.
-var editions2024Defaults = {enum_type: "OPEN", field_presence: "EXPLICIT", json_format: "ALLOW", message_encoding: "LENGTH_PREFIXED", repeated_field_encoding: "PACKED", utf8_validation: "VERIFY", enforce_naming_style: "STYLE2024", default_symbol_visibility: "EXPORT_TOP_LEVEL" };
-var editions2023Defaults = {enum_type: "OPEN", field_presence: "EXPLICIT", json_format: "ALLOW", message_encoding: "LENGTH_PREFIXED", repeated_field_encoding: "PACKED", utf8_validation: "VERIFY", enforce_naming_style: "STYLE_LEGACY", default_symbol_visibility: "EXPORT_ALL" };
 var proto2Defaults = {enum_type: "CLOSED", field_presence: "EXPLICIT", json_format: "LEGACY_BEST_EFFORT", message_encoding: "LENGTH_PREFIXED", repeated_field_encoding: "EXPANDED", utf8_validation: "NONE", enforce_naming_style: "STYLE_LEGACY", default_symbol_visibility: "EXPORT_ALL" };
 var proto3Defaults = {enum_type: "OPEN", field_presence: "IMPLICIT", json_format: "ALLOW", message_encoding: "LENGTH_PREFIXED", repeated_field_encoding: "PACKED", utf8_validation: "VERIFY", enforce_naming_style: "STYLE_LEGACY", default_symbol_visibility: "EXPORT_ALL" };
+var editions2023Defaults = {enum_type: "OPEN", field_presence: "EXPLICIT", json_format: "ALLOW", message_encoding: "LENGTH_PREFIXED", repeated_field_encoding: "PACKED", utf8_validation: "VERIFY", enforce_naming_style: "STYLE_LEGACY", default_symbol_visibility: "EXPORT_ALL" };
+var editions2024Defaults = {enum_type: "OPEN", field_presence: "EXPLICIT", json_format: "ALLOW", message_encoding: "LENGTH_PREFIXED", repeated_field_encoding: "PACKED", utf8_validation: "VERIFY", enforce_naming_style: "STYLE2024", default_symbol_visibility: "EXPORT_TOP_LEVEL" };
+var editions2026Defaults = {enum_type: "OPEN", field_presence: "EXPLICIT", json_format: "ALLOW", message_encoding: "LENGTH_PREFIXED", repeated_field_encoding: "PACKED", utf8_validation: "VERIFY", enforce_naming_style: "STYLE2026", default_symbol_visibility: "STRICT", enforce_proto_limits: "PROTO_LIMITS2026" };
 
 /**
  * Constructs a new reflection object instance.
@@ -227,6 +228,8 @@ ReflectionObject.prototype._resolveFeatures = function _resolveFeatures(edition)
             defaults = Object.assign({}, editions2023Defaults);
         } else if (edition === "2024") {
             defaults = Object.assign({}, editions2024Defaults);
+        } else if (edition === "2026") {
+            defaults = Object.assign({}, editions2026Defaults);
         } else {
             throw new Error("Unknown edition: " + edition);
         }
@@ -270,7 +273,7 @@ ReflectionObject.prototype._inferLegacyProtoFeatures = function _inferLegacyProt
  * @returns {*} Option value or `undefined` if not set
  */
 ReflectionObject.prototype.getOption = function getOption(name) {
-    if (this.options)
+    if (this.options && Object.prototype.hasOwnProperty.call(this.options, name))
         return this.options[name];
     return undefined;
 };
@@ -289,9 +292,12 @@ ReflectionObject.prototype.setOption = function setOption(name, value, ifNotSet)
         this.options = {};
     if (/^features\./.test(name)) {
         util.setProperty(this.options, name, value, ifNotSet);
-    } else if (!ifNotSet || this.options[name] === undefined) {
-        if (this.getOption(name) !== value) this.resolved = false;
-        this.options[name] = value;
+    } else {
+        var prev = this.getOption(name);
+        if (!ifNotSet || prev === undefined) {
+            if (prev !== value) this.resolved = false;
+            this.options[name] = value;
+        }
     }
 
     return this;
@@ -353,15 +359,22 @@ ReflectionObject.prototype.setOptions = function setOptions(options, ifNotSet) {
 
 /**
  * Converts this instance to its string representation.
+ * @name ReflectionObject#toString
+ * @function
  * @returns {string} Class name[, space, full name]
  */
-ReflectionObject.prototype.toString = function toString() {
-    var className = this.constructor.className,
-        fullName  = this.fullName;
-    if (fullName.length)
-        return className + " " + fullName;
-    return className;
-};
+Object.defineProperty(ReflectionObject.prototype, "toString", {
+    value: function toString() {
+        var className = this.constructor.className,
+            fullName  = this.fullName;
+        if (fullName.length)
+            return className + " " + fullName;
+        return className;
+    },
+    writable: true,
+    enumerable: false,
+    configurable: true
+});
 
 /**
  * Converts the edition this object is pinned to for JSON format.

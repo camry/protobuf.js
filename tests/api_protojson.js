@@ -7,8 +7,13 @@ function owns(obj, key) {
     return Object.prototype.hasOwnProperty.call(obj, key);
 }
 
+function bytes(buf) {
+    return Array.prototype.slice.call(buf);
+}
+
 var proto = "syntax = \"proto3\";\
 message Msg { int32 value = 1; }\
+message LongMsg { int64 value = 1; }\
 enum Choice { A = 0; B = 1; }\
 message Inner { int32 value = 1; }\
 message Outer {\
@@ -31,6 +36,7 @@ message MapMsg {\
 
 var root = protobuf.parse(proto).root,
     Msg = root.lookupType("Msg"),
+    LongMsg = root.lookupType("LongMsg"),
     Outer = root.lookupType("Outer"),
     OneofDefault = root.lookupType("OneofDefault"),
     MapMsg = root.lookupType("MapMsg"),
@@ -80,8 +86,14 @@ message Empty {}\
 message Duration { int64 seconds = 1; int32 nanos = 2; }\
 message Timestamp { int64 seconds = 1; int32 nanos = 2; }\
 message FieldMask { repeated string paths = 1; }\
+message DoubleValue { double value = 1; }\
+message FloatValue { float value = 1; }\
 message StringValue { string value = 1; }\
 message Int64Value { int64 value = 1; }\
+message UInt64Value { uint64 value = 1; }\
+message Int32Value { int32 value = 1; }\
+message UInt32Value { uint32 value = 1; }\
+message BoolValue { bool value = 1; }\
 message BytesValue { bytes value = 1; }\
 enum NullValue { NULL_VALUE = 0; }\
 message Struct { map<string, Value> fields = 1; }\
@@ -114,6 +126,17 @@ message WktMsg {\
   google.protobuf.Timestamp timestamp = 12;\
   bytes bytes_field = 13;\
 }\
+message WrapperDefaults {\
+  google.protobuf.DoubleValue double_wrapper = 1;\
+  google.protobuf.FloatValue float_wrapper = 2;\
+  google.protobuf.Int64Value int64_wrapper = 3;\
+  google.protobuf.UInt64Value uint64_wrapper = 4;\
+  google.protobuf.Int32Value int32_wrapper = 5;\
+  google.protobuf.UInt32Value uint32_wrapper = 6;\
+  google.protobuf.BoolValue bool_wrapper = 7;\
+  google.protobuf.StringValue string_wrapper = 8;\
+  google.protobuf.BytesValue bytes_wrapper = 9;\
+}\
 message NullMsg {\
   int32 value = 1;\
   repeated string names = 2;\
@@ -121,6 +144,7 @@ message NullMsg {\
   google.protobuf.Duration duration = 4;\
   google.protobuf.StringValue string_wrapper = 5;\
   google.protobuf.Value value_msg = 6;\
+  repeated google.protobuf.NullValue null_values = 7;\
 }", root);
     return root.resolveAll();
 }
@@ -167,6 +191,37 @@ tape.test("protojson - accepts already-parsed input", function(test) {
     test.end();
 });
 
+tape.test("protojson - bounds integer conversion inputs", function(test) {
+    var nativeBigInt = protobuf.util.global.BigInt,
+        maxBigIntLength = 0,
+        oversized = "9".repeat(1000),
+        error;
+    protobuf.util.global.BigInt = function(value) {
+        maxBigIntLength = Math.max(maxBigIntLength, String(value).length);
+        return nativeBigInt(value);
+    };
+    try {
+        try {
+            protojson.fromJson(LongMsg, { value: oversized });
+        } catch (err) {
+            error = err;
+        }
+        test.ok(error && /out of range/.test(error.message), "rejects oversized integer strings");
+        test.ok(error && error.message.length < oversized.length, "does not copy oversized values into errors");
+        test.equal(protojson.fromJson(LongMsg, { value: "0".repeat(1000) + "1" }).value.toString(), "1", "accepts insignificant leading zeros");
+
+        var map = {};
+        map[oversized] = "bad";
+        test.throws(function() {
+            protojson.fromJson(MapMsg, { uint64Map: map });
+        }, /out of range/, "rejects oversized integer map keys");
+        test.ok(maxBigIntLength <= 20, "passes only bounded values to BigInt");
+    } finally {
+        protobuf.util.global.BigInt = nativeBigInt;
+    }
+    test.end();
+});
+
 tape.test("protojson - omits implicit default values", function(test) {
     test.deepEqual(protojson.toJson(Msg, Msg.create({ value: 0 })), {}, "omits owned implicit scalar defaults");
     test.deepEqual(protojson.toJson(OneofDefault, OneofDefault.create({ value: 0 })), { value: 0 }, "emits explicit oneof defaults");
@@ -189,6 +244,65 @@ tape.test("protojson - rejects JSON name collisions", function(test) {
         protojson.fromJson(Collision, { same: 1 });
     }, /duplicate ProtoJSON field name "same"/, "rejects ambiguous JSON name lookup");
 
+    test.end();
+});
+
+tape.test("protojson - emits first enum alias from JSON descriptor roots", function(test) {
+    var schema = "syntax = \"proto3\";\
+enum AliasChoice {\
+  option allow_alias = true;\
+  UNKNOWN = 0;\
+  OLD = 1;\
+  NEW = 1;\
+}\
+message AliasMessage {\
+  AliasChoice choice = 1;\
+}",
+        parsedRoot = protobuf.parse(schema).root.resolveAll(),
+        jsonRoot = protobuf.Root.fromJSON(parsedRoot.toJSON()).resolveAll(),
+        parsedMessage = parsedRoot.lookupType("AliasMessage").create({ choice: 1 }),
+        jsonMessage = jsonRoot.lookupType("AliasMessage").create({ choice: 1 });
+
+    test.deepEqual(protojson.toJson(parsedRoot.lookupType("AliasMessage"), parsedMessage), {
+        choice: "OLD"
+    }, "parsed proto root emits first enum alias");
+    test.deepEqual(protojson.toJson(jsonRoot.lookupType("AliasMessage"), jsonMessage), {
+        choice: "OLD"
+    }, "JSON descriptor root emits first enum alias");
+    test.end();
+});
+
+tape.test("protojson - custom enum JSON names", function(test) {
+    var root = protobuf.parse(`edition = "2026";
+enum Choice {
+  option allow_alias = true;
+  ZERO = 0;
+  CUSTOM = 1 [(pb.enumvalue.json).string = "custom"];
+  EMPTY = 2 [(pb.enumvalue.json) = { string: "" }];
+  ESCAPED = 3 [(pb.enumvalue.json).string = "quote\\\"\\t\\n"];
+  ALIAS = 1 [(pb.enumvalue.json).string = "custom"];
+  SIX = 6 [(pb.enumvalue.json).string = "6"];
+  PROTO = 7 [(pb.enumvalue.json).string = "__proto__"];
+}
+message Message {
+  Choice choice = 1;
+  repeated Choice choices = 2;
+  map<string, Choice> choice_map = 3;
+}`).root.resolveAll();
+    [root, protobuf.Root.fromJSON(root.toJSON()).resolveAll()].forEach(function(root) {
+        var Message = root.lookupType("Message");
+        [ [0, "ZERO"], [1, "custom"], [2, ""], [3, "quote\"\t\n"], [6, "6"], [7, "__proto__"], [99, 99] ].forEach(function(pair) {
+            test.equal(protojson.fromJson(Message, { choice: pair[1] }).choice, pair[0], "reads " + JSON.stringify(pair[1]));
+            test.equal(protojson.toJson(Message, { choice: pair[0] }).choice, pair[1], "writes " + pair[0]);
+        });
+        test.equal(protojson.fromJson(Message, { choice: "ALIAS" }).choice, 1, "still accepts declared names");
+        var json = { choices: ["custom", "", "6"], choiceMap: { first: "custom", second: "" } };
+        test.same(protojson.toJson(Message, protojson.fromJson(Message, json)), json, "round-trips repeated and map values");
+        test.throws(function() {
+            protojson.fromJson(Message, { choice: "1" });
+        }, /unknown enum/, "does not accept reverse enum mappings as names");
+        test.notOk(owns(protojson.fromJson(Message, { choice: "unknown" }, { ignoreUnknownFields: true }), "choice"), "can ignore unknown names");
+    });
     test.end();
 });
 
@@ -415,6 +529,59 @@ tape.test("protojson - round trips well-known types", function(test) {
     test.end();
 });
 
+tape.test("protojson - omits default well-known scalar fields when parsing", function(test) {
+    var wrapperDefaults = [
+        [ "DoubleValue", 0 ],
+        [ "FloatValue", 0 ],
+        [ "Int64Value", "0" ],
+        [ "UInt64Value", "0" ],
+        [ "Int32Value", 0 ],
+        [ "UInt32Value", 0 ],
+        [ "BoolValue", false ],
+        [ "StringValue", "" ],
+        [ "BytesValue", "" ]
+    ];
+    for (var i = 0; i < wktRoots.length; ++i) {
+        var root = wktRoots[i].root,
+            label = wktRoots[i].name,
+            Timestamp = root.lookupType("google.protobuf.Timestamp"),
+            Duration = root.lookupType("google.protobuf.Duration"),
+            Any = root.lookupType("google.protobuf.Any"),
+            WrapperDefaults = root.lookupType("test.WrapperDefaults");
+
+        test.same(bytes(Timestamp.encode(protojson.fromJson(Timestamp, "1970-01-01T00:00:00Z")).finish()), [], label + ": omits default timestamp fields");
+        test.same(bytes(Timestamp.encode(protojson.fromJson(Timestamp, "1970-01-01T00:00:01Z")).finish()), [ 8, 1 ], label + ": omits zero timestamp nanos");
+        test.same(bytes(Timestamp.encode(protojson.fromJson(Timestamp, "1970-01-01T00:00:00.000000001Z")).finish()), [ 16, 1 ], label + ": omits zero timestamp seconds");
+        test.same(bytes(Duration.encode(protojson.fromJson(Duration, "0s")).finish()), [], label + ": omits default duration fields");
+        test.same(bytes(Duration.encode(protojson.fromJson(Duration, "1s")).finish()), [ 8, 1 ], label + ": omits zero duration nanos");
+        test.same(bytes(Duration.encode(protojson.fromJson(Duration, "0.000000001s")).finish()), [ 16, 1 ], label + ": omits zero duration seconds");
+        for (var j = 0; j < wrapperDefaults.length; ++j) {
+            var Wrapper = root.lookupType("google.protobuf." + wrapperDefaults[j][0]);
+            test.same(bytes(Wrapper.encode(protojson.fromJson(Wrapper, wrapperDefaults[j][1])).finish()), [], label + ": omits default " + wrapperDefaults[j][0] + " value");
+        }
+        var any = protojson.fromJson(Any, { "@type": "type.googleapis.com/google.protobuf.Empty" }),
+            anyExpected = {};
+        anyExpected[Any.fieldsArray[0].name] = "type.googleapis.com/google.protobuf.Empty";
+        test.same(bytes(Any.encode(any).finish()), bytes(Any.encode(anyExpected).finish()), label + ": omits empty Any value");
+        test.deepEqual(protojson.toJson(Any, Any.decode(Any.encode(any).finish())), { "@type": "type.googleapis.com/google.protobuf.Empty" }, label + ": treats missing Any value as empty bytes");
+
+        var wrapperJson = {
+            doubleWrapper: 0,
+            floatWrapper: 0,
+            int64Wrapper: "0",
+            uint64Wrapper: "0",
+            int32Wrapper: 0,
+            uint32Wrapper: 0,
+            boolWrapper: false,
+            stringWrapper: "",
+            bytesWrapper: ""
+        };
+        test.deepEqual(protojson.toJson(WrapperDefaults, protojson.fromJson(WrapperDefaults, wrapperJson)), wrapperJson, label + ": emits nested wrapper defaults");
+    }
+
+    test.end();
+});
+
 tape.test("protojson - accepts null fields as absent", function(test) {
     var message = protojson.fromJson(Msg, { value: null });
     test.equal(owns(message, "value"), false, "singular scalar null is absent");
@@ -462,6 +629,23 @@ tape.test("protojson - rejects null repeated elements and map values", function(
     test.end();
 });
 
+tape.test("protojson - round trips repeated google.protobuf.NullValue elements", function(test) {
+    for (var i = 0; i < wktRoots.length; ++i) {
+        var NullMsg = wktRoots[i].root.lookupType("test.NullMsg"),
+            label = wktRoots[i].name,
+            message = protojson.fromJson(NullMsg, {
+                nullValues: [null, null]
+            });
+
+        test.deepEqual(message.nullValues, [0, 0], label + ": parses null elements as NULL_VALUE");
+        test.deepEqual(protojson.toJson(NullMsg, message), {
+            nullValues: [null, null]
+        }, label + ": emits NULL_VALUE elements as null");
+    }
+
+    test.end();
+});
+
 tape.test("protojson - rejects invalid UTF-16 in well-known values", function(test) {
     for (var i = 0; i < wktRoots.length; ++i) {
         var root = wktRoots[i].root,
@@ -485,7 +669,7 @@ tape.test("protojson - parses timestamp string shape strictly", function(test) {
     var message = protojson.fromJson(WithTimestamp, {
         ts: "1970-01-01T00:00:00.000000001Z"
     });
-    test.equal(message.ts.seconds, 0, "parses timestamp seconds");
+    test.equal(message.ts.seconds || 0, 0, "parses timestamp seconds");
     test.equal(message.ts.nanos, 1, "parses timestamp nanos");
 
     test.throws(function() {
@@ -527,7 +711,7 @@ tape.test("protojson - parses duration string shape strictly", function(test) {
     var negative = protojson.fromJson(WithDuration, {
         duration: "-0.5s"
     });
-    test.equal(negative.duration.seconds, 0, "parses negative zero duration seconds");
+    test.equal(negative.duration.seconds || 0, 0, "parses negative zero duration seconds");
     test.equal(negative.duration.nanos, -500000000, "parses negative duration nanos");
 
     test.throws(function() {

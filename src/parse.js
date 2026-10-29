@@ -23,6 +23,8 @@ var base10Re    = /^[1-9][0-9]*$/,
     base16NegRe = /^-?0[x][0-9a-fA-F]+$/,
     base8Re     = /^0[0-7]+$/,
     base8NegRe  = /^-?0[0-7]+$/,
+    integerTypeRe = /^(?:u?int|sint|s?fixed)(?:32|64)$/,
+    unsignedTypeRe = /^(?:uint|fixed)(?:32|64)$/,
     numberRe    = util.patterns.numberRe,
     nameRe      = /^[a-zA-Z_][a-zA-Z_0-9]*$/,
     typeRefRe   = util.patterns.typeRefRe;
@@ -202,7 +204,7 @@ function parse(source, root, options) {
             case "nan": case "NAN": case "Nan": case "NaN":
                 return NaN;
             case "0":
-                return 0;
+                return sign * 0;
         }
         if (base10Re.test(token))
             return sign * parseInt(token, 10);
@@ -219,29 +221,31 @@ function parse(source, root, options) {
         throw illegal(token, "number", insideTryCatch);
     }
 
+    function parseInteger(token, acceptNegative, name) {
+        if (token === null)
+            throw illegal(token, "end of input");
+        if (!acceptNegative && token.charAt(0) === "-")
+            throw illegal(token, name || "integer");
+        if (token === "0" || token === "-0")
+            return 0;
+        var value;
+        if (base10NegRe.test(token))
+            value = parseInt(token, 10);
+        else if (base16NegRe.test(token))
+            value = parseInt(token, 16);
+        else if (base8NegRe.test(token))
+            value = parseInt(token, 8);
+        else
+            throw illegal(token, name || "integer");
+        return value || 0;
+    }
+
     function parseId(token, acceptNegative, max) {
         switch (token) {
             case "max": case "MAX": case "Max":
                 return max || maxFieldId;
-            case "0":
-                return 0;
         }
-
-        /* istanbul ignore if */
-        if (!acceptNegative && token.charAt(0) === "-")
-            throw illegal(token, "id");
-
-        if (base10NegRe.test(token))
-            return parseInt(token, 10);
-        if (base16NegRe.test(token))
-            return parseInt(token, 16);
-
-        /* istanbul ignore else */
-        if (base8NegRe.test(token))
-            return parseInt(token, 8);
-
-        /* istanbul ignore next */
-        throw illegal(token, "id");
+        return parseInteger(token, acceptNegative, "id");
     }
 
     function parsePackage() {
@@ -252,7 +256,7 @@ function parse(source, root, options) {
         pkg = next();
 
         /* istanbul ignore if */
-        if (!typeRefRe.test(pkg))
+        if (pkg === null || !typeRefRe.test(pkg))
             throw illegal(pkg, "name");
 
         ptr = ptr.define(pkg);
@@ -304,7 +308,7 @@ function parse(source, root, options) {
     function parseEdition() {
         skip("=");
         edition = readString();
-        const supportedEditions = ["2023", "2024"];
+        const supportedEditions = ["2023", "2024", "2026"];
 
         /* istanbul ignore if */
         if (!supportedEditions.includes(edition))
@@ -338,6 +342,7 @@ function parse(source, root, options) {
                 if (edition < "2024") {
                     return false;
                 }
+                var visibility = token;
                 token = next();
                 if (token === "export" || token === "local") {
                     return false;
@@ -345,9 +350,11 @@ function parse(source, root, options) {
                 if (token !== "message" && token !== "enum") {
                     return false;
                 }
-                /* eslint-disable no-warning-comments */
-                // TODO: actually enforce visiblity modifiers like protoc does.
-                return parseCommon(parent, token, depth);
+                (token === "message"
+                    ? parseType(parent, token, depth + 1)
+                    : parseEnum(parent, token)
+                ).visibility = visibility;
+                return true;
 
             case "service":
                 parseService(parent, token, depth + 1);
@@ -389,7 +396,7 @@ function parse(source, root, options) {
             throw Error("max depth exceeded");
 
         /* istanbul ignore if */
-        if (!nameRe.test(token = next()))
+        if ((token = next()) === null || !nameRe.test(token))
             throw illegal(token, "type name");
 
         var type = new Type(token);
@@ -452,10 +459,14 @@ function parse(source, root, options) {
         if (parent === ptr) {
             topLevelObjects.push(type);
         }
+        return type;
     }
 
     function parseField(parent, rule, extend, depth) {
         var type = next();
+        if (type === null) {
+            throw illegal(type, "end of input");
+        }
         if (type === "group") {
             parseGroup(parent, rule, extend, depth);
             return;
@@ -467,8 +478,12 @@ function parse(source, root, options) {
         //    package  .subpackage field       tokens: "package" ".subpackage" [TYPE NAME ENDS HERE] "field"
         // Keep reading tokens until we get a type name with no period at the end,
         // and the next token does not start with a period.
-        while (type.endsWith(".") || peek().startsWith(".")) {
-            type += next();
+        while (type.endsWith(".") || (peek() || "").startsWith(".")) {
+            var part = next();
+            if (part === null) {
+                throw illegal(part, "end of input");
+            }
+            type += part;
         }
 
         /* istanbul ignore if */
@@ -476,6 +491,9 @@ function parse(source, root, options) {
             throw illegal(type, "type");
 
         var name = next();
+        if (name === null) {
+            throw illegal(name, "end of input");
+        }
 
         /* istanbul ignore if */
 
@@ -528,7 +546,7 @@ function parse(source, root, options) {
         var name = next();
 
         /* istanbul ignore if */
-        if (!nameRe.test(name))
+        if (name === null || !nameRe.test(name))
             throw illegal(name, "name");
 
         var fieldName = util.lcFirst(name);
@@ -544,6 +562,10 @@ function parse(source, root, options) {
             switch (token) {
 
                 case ";":
+                    break;
+
+                case "map":
+                    parseMapField(type);
                     break;
 
                 case "option":
@@ -626,7 +648,7 @@ function parse(source, root, options) {
         var name = next();
 
         /* istanbul ignore if */
-        if (!nameRe.test(name))
+        if (name === null || !nameRe.test(name))
             throw illegal(name, "name");
 
         skip("=");
@@ -653,7 +675,7 @@ function parse(source, root, options) {
     function parseOneOf(parent, token, depth) {
 
         /* istanbul ignore if */
-        if (!nameRe.test(token = next()))
+        if ((token = next()) === null || !nameRe.test(token))
             throw illegal(token, "name");
 
         var oneof = new OneOf(applyCase(token));
@@ -672,10 +694,11 @@ function parse(source, root, options) {
     function parseEnum(parent, token) {
 
         /* istanbul ignore if */
-        if (!nameRe.test(token = next()))
+        if ((token = next()) === null || !nameRe.test(token))
             throw illegal(token, "name");
 
-        var enm = new Enum(token);
+        var enm = new Enum(token),
+            values = [];
         ifBlock(enm, function parseEnum_block(token) {
           switch(token) {
             case ";":
@@ -692,16 +715,19 @@ function parse(source, root, options) {
               break;
 
             default:
-              parseEnumValue(enm, token);
+              values.push(parseEnumValue(token));
           }
         });
+        for (var i = 0; i < values.length; ++i)
+            enm.add(values[i].name, values[i].id, values[i].comment, values[i].options);
         parent.add(enm);
         if (parent === ptr) {
             topLevelObjects.push(enm);
         }
+        return enm;
     }
 
-    function parseEnumValue(parent, token) {
+    function parseEnumValue(token) {
 
         /* istanbul ignore if */
         if (!nameRe.test(token))
@@ -733,7 +759,12 @@ function parse(source, root, options) {
         }, function parseEnumValue_line() {
             parseInlineOptions(dummy); // skip
         });
-        parent.add(token, value, dummy.comment, dummy.parsedOptions || dummy.options);
+        return {
+            name: token,
+            id: value,
+            comment: dummy.comment,
+            options: dummy.parsedOptions || dummy.options
+        };
     }
 
     function parseOption(parent, token) {
@@ -745,6 +776,9 @@ function parse(source, root, options) {
             }
 
             while (token !== "=") {
+                if (token === null) {
+                    throw illegal(token, "end of input");
+                }
                 if (token === "(") {
                     var parensValue = next();
                     skip(")");
@@ -781,16 +815,27 @@ function parse(source, root, options) {
             var objectResult = {};
 
             while (!skip("}", true)) {
-                /* istanbul ignore if */
-                if (!nameRe.test(token = next())) {
-                    throw illegal(token, "name");
-                }
-                if (token === null) {
-                  throw illegal(token, "end of input");
+                token = next();
+                var propName;
+                if (token === null)
+                    throw illegal(token, "end of input");
+                if (token === "[") {
+                    token = next();
+                    // Extension name or, for Any, a type URL: "<prefix>/<fully.qualified.Type>".
+                    var slash = token === null ? -1 : token.lastIndexOf("/");
+                    if (token === null || !typeRefRe.test(slash < 0 ? token : token.slice(slash + 1)))
+                        throw illegal(token, "name");
+                    propName = "[" + token + "]";
+                    skip("]");
+                } else {
+                    /* istanbul ignore if */
+                    if (!nameRe.test(token)) {
+                        throw illegal(token, "name");
+                    }
+                    propName = token;
                 }
 
                 var value;
-                var propName = token;
 
                 skip(":", true);
 
@@ -798,28 +843,35 @@ function parse(source, root, options) {
                     // option (my_option) = {
                     //     repeated_value: [ "foo", "bar" ]
                     // };
-                    value = parseOptionValue(parent, name + "." + token, depth + 1);
+                    value = parseOptionValue(parent, name + "." + propName, depth + 1);
                 } else if (peek() === "[") {
                     value = [];
-                    var lastValue;
+                    var lastValue,
+                        lastValueIsAggregate;
                     if (skip("[", true)) {
                         if (!skip("]", true)) {
                             do {
-                                lastValue = readValue(true);
+                                lastValueIsAggregate = peek() === "{";
+                                lastValue = lastValueIsAggregate
+                                    ? parseOptionValue(parent, name + "." + propName, depth + 1)
+                                    : readValue(true);
                                 value.push(lastValue);
                             } while (skip(",", true));
                             skip("]");
                             if (typeof lastValue !== "undefined") {
-                                setOption(parent, name + "." + token, lastValue);
+                                if (!lastValueIsAggregate)
+                                    setOption(parent, name + "." + propName, lastValue);
                             }
                         }
                     }
                 } else {
                     value = readValue(true);
-                    setOption(parent, name + "." + token, value);
+                    setOption(parent, name + "." + propName, value);
                 }
 
-                var prevValue = objectResult[propName];
+                var prevValue = Object.prototype.hasOwnProperty.call(objectResult, propName)
+                    ? objectResult[propName]
+                    : undefined;
 
                 if (prevValue)
                     value = [].concat(prevValue).concat(value);
@@ -835,7 +887,9 @@ function parse(source, root, options) {
             return objectResult;
         }
 
-        var simpleValue = readValue(true);
+        var simpleValue = name === "default" && parent instanceof Field && integerTypeRe.test(parent.type)
+            ? parseInteger(next(), !unsignedTypeRe.test(parent.type))
+            : readValue(true);
         setOption(parent, name, simpleValue);
         return simpleValue;
         // Does not enforce a delimiter to be universal
@@ -849,15 +903,12 @@ function parse(source, root, options) {
         // lift json_name onto Field
         if (name === "json_name" && parent instanceof Field) {
             parent.jsonName = value;
-            return;
         }
         if (parent.setOption)
             parent.setOption(name, value);
     }
 
     function setParsedOption(parent, name, value, propName) {
-        if (name === "json_name" && parent instanceof Field)
-            return; // lifted onto Field#jsonName above
         if (parent.setParsedOption)
             parent.setParsedOption(name, value, propName);
     }
@@ -879,7 +930,7 @@ function parse(source, root, options) {
             throw Error("max depth exceeded");
 
         /* istanbul ignore if */
-        if (!nameRe.test(token = next()))
+        if ((token = next()) === null || !nameRe.test(token))
             throw illegal(token, "service name");
 
         var service = new Service(token);
@@ -957,7 +1008,7 @@ function parse(source, root, options) {
     function parseExtension(parent, token, depth) {
 
         /* istanbul ignore if */
-        if (!typeRefRe.test(token = next()))
+        if ((token = next()) === null || !typeRefRe.test(token))
             throw illegal(token, "reference");
 
         var reference = token;

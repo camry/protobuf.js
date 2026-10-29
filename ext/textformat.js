@@ -464,17 +464,16 @@ Parser.prototype.parseAny = function parseAny(type, typeUrl, object, seen, depth
 };
 
 Parser.prototype.parseMapField = function parseMapField(field, object, depth) {
-    if (!object[field.name])
-        object[field.name] = {};
+    var map = getField(object, field, {});
     if (this.tn.skip("[")) {
         if (!this.tn.skip("]")) {
             do {
-                addMapEntry(field, object[field.name], this.parseMapEntry(field, depth + 1));
+                addMapEntry(field, map, this.parseMapEntry(field, depth + 1));
             } while (this.tn.skip(","));
             this.tn.expect("]");
         }
     } else
-        addMapEntry(field, object[field.name], this.parseMapEntry(field, depth + 1));
+        addMapEntry(field, map, this.parseMapEntry(field, depth + 1));
 };
 
 Parser.prototype.parseMessageFieldDelimiter = function parseMessageFieldDelimiter() {
@@ -587,14 +586,14 @@ Parser.prototype.parseScalar = function parseScalar(field) {
 };
 
 Parser.prototype.readStringBytes = function readStringBytes() {
-    var token = this.tn.next(),
-        bytes = [];
+    var token = this.tn.next();
     if (!token || token.type !== "string")
         this.error("expected string");
-    Array.prototype.push.apply(bytes, token.value);
+    var bytes = token.value;
     while ((token = this.tn.peek()) && token.type === "string") {
         token = this.tn.next();
-        Array.prototype.push.apply(bytes, token.value);
+        for (var i = 0; i < token.value.length; ++i)
+            bytes.push(token.value[i]);
     }
     return bytes;
 };
@@ -637,7 +636,7 @@ Parser.prototype.skipBalanced = function skipBalanced(open, close, depth) {
 
 function addField(object, seen, field, value) {
     if (field.repeated) {
-        (object[field.name] || (object[field.name] = [])).push(value);
+        getField(object, field, []).push(value);
         return;
     }
     if (Object.prototype.hasOwnProperty.call(seen, field.name))
@@ -649,6 +648,18 @@ function addField(object, seen, field, value) {
         seen[oneofName] = true;
     }
     seen[field.name] = true;
+    setField(object, field, value);
+}
+
+function getField(object, field, value) {
+    if (!Object.prototype.hasOwnProperty.call(object, field.name))
+        setField(object, field, value);
+    return object[field.name];
+}
+
+function setField(object, field, value) {
+    if (field.name === "__proto__")
+        util.makeProp(object, field.name);
     object[field.name] = value;
 }
 
@@ -661,7 +672,10 @@ function addMapEntry(field, map, entry) {
         value = Object.prototype.hasOwnProperty.call(entry, "value")
             ? entry.value
             : defaultMapValue(valueField);
-    map[mapKey(keyField, key)] = value;
+    var outKey = mapKey(keyField, key);
+    if (outKey === "__proto__")
+        util.makeProp(map, outKey);
+    map[outKey] = value;
 }
 
 function defaultMapValue(field) {
@@ -828,10 +842,20 @@ function parseInteger(token, sign, unsigned, bits) {
     } else if (!/^(?:0|[1-9][0-9]*)$/.test(raw))
         throw Error("integer value expected");
 
+    digits = digits.replace(/^0+(?=.)/, "");
+    if (digits.length > Math.ceil(bits / 3)) // 3 bits per octal digit
+        throw Error((unsigned ? "unsigned " : "") + "integer value out of range");
+
     if (typeof util.global.BigInt === "function")
         return parseIntegerBigInt(digits, radix, sign, unsigned, bits);
 
     var value = parseInt(digits, radix) * sign;
+    if (bits === 32) {
+        var min = unsigned ? 0 : -2147483648,
+            max = unsigned ? 4294967295 : 2147483647;
+        if (value < min || value > max)
+            throw Error((unsigned ? "unsigned " : "") + "integer value out of range");
+    }
     if (bits === 64 && util.Long)
         return util.Long.fromString(String(value), unsigned);
     return value;

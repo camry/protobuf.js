@@ -15,7 +15,7 @@ function indexOutOfRange(reader, writeLength) {
 
 /**
  * Constructs a new reader instance using the specified buffer.
- * @classdesc Wire format reader using `Uint8Array` if available, otherwise `Array`.
+ * @classdesc Wire format reader using `Uint8Array`.
  * @constructor
  * @param {Uint8Array} buffer Buffer to read from
  */
@@ -40,24 +40,26 @@ function Reader(buffer) {
     this.len = buffer.length;
 
     /**
+     * Cached DataView for packed reads.
+     * @type {DataView|null}
+     */
+    this.view = null;
+
+    /**
      * Whether to discard unknown fields while decoding.
      * @type {boolean}
      */
     this.discardUnknown = Reader.discardUnknown;
 }
 
-var create_array = typeof Uint8Array !== "undefined"
-    ? function create_typed_array(buffer) {
-        if (buffer instanceof Uint8Array || Array.isArray(buffer))
-            return new Reader(buffer);
-        throw Error("illegal buffer");
-    }
-    /* istanbul ignore next */
-    : function create_array(buffer) {
-        if (Array.isArray(buffer))
-            return new Reader(buffer);
-        throw Error("illegal buffer");
-    };
+function create_array(buffer) {
+    // TODO: Remove plain array reader support in the next major release.
+    if (Array.isArray(buffer))
+        buffer = new Uint8Array(buffer);
+    if (buffer instanceof Uint8Array)
+        return new Reader(buffer);
+    throw Error("illegal buffer");
+}
 
 var create = function create() {
     return util.Buffer
@@ -82,8 +84,6 @@ var create = function create() {
  */
 Reader.create = create();
 
-Reader.prototype._slice = util.Array.prototype.subarray || /* istanbul ignore next */ util.Array.prototype.slice;
-
 /**
  * Returns raw bytes from the backing buffer without advancing the reader.
  * @param {number} start Start offset
@@ -91,13 +91,22 @@ Reader.prototype._slice = util.Array.prototype.subarray || /* istanbul ignore ne
  * @returns {Uint8Array} Raw bytes
  */
 Reader.prototype.raw = function read_raw(start, end) {
-    if (Array.isArray(this.buf)) // plain array
-        return this.buf.slice(start, end);
-
-    if (start === end) // fix for IE 10/Win8 and others' subarray returning array of size 1
-        return new this.buf.constructor(0);
-    return this._slice.call(this.buf, start, end);
+    return this.buf.subarray(start, end);
 };
+
+function readVarint32NearEnd(reader) {
+    // Safely read up to four bytes of a varint32 near the reader limit
+    var value = 0;
+    for (var i = 0; i < 4; ++i) {
+        if (reader.pos >= reader.len)
+            throw indexOutOfRange(reader);
+        var b = reader.buf[reader.pos++];
+        value = (value | (b & 127) << i * 7) >>> 0;
+        if (b < 128)
+            return value;
+    }
+    throw indexOutOfRange(reader);
+}
 
 /**
  * Reads a varint as an unsigned 32 bit value.
@@ -105,6 +114,12 @@ Reader.prototype.raw = function read_raw(start, end) {
  * @returns {number} Value read
  */
 Reader.prototype.uint32 = function read_uint32() {
+    if (this.len - this.pos < 5) {
+        if (this.pos >= this.len)
+            throw indexOutOfRange(this);
+        if (this.buf[this.pos] >= 128)
+            return readVarint32NearEnd(this);
+    }
     var buf = this.buf,
         pos = this.pos,
         value = (buf[pos] & 127) >>> 0;
@@ -155,6 +170,12 @@ Reader.prototype.uint32 = function read_uint32() {
  * @returns {number} Tag read
  */
 Reader.prototype.tag = function read_tag() {
+    if (this.len - this.pos < 5) {
+        if (this.pos >= this.len)
+            throw indexOutOfRange(this);
+        if (this.buf[this.pos] >= 128)
+            return readVarint32NearEnd(this);
+    }
     var buf = this.buf,
         pos = this.pos,
         value = (buf[pos] & 127) >>> 0;
@@ -185,6 +206,45 @@ Reader.prototype.tag = function read_tag() {
 
     this.pos = pos + 1;
     throw Error("invalid tag encoding");
+};
+
+/**
+ * Reads a varint length prefix within signed 32 bit range.
+ * @returns {number} Length read
+ */
+Reader.prototype.size = function read_size() {
+    if (this.len - this.pos < 5) {
+        if (this.pos >= this.len)
+            throw indexOutOfRange(this);
+        if (this.buf[this.pos] >= 128)
+            return readVarint32NearEnd(this);
+    }
+    var buf = this.buf,
+        pos = this.pos,
+        value = (buf[pos] & 127) >>> 0;
+    if (buf[pos++] < 128) {
+        this.pos = pos;
+        return value;
+    }
+    value = (value | (buf[pos] & 127) << 7) >>> 0;
+    if (buf[pos++] < 128) {
+        this.pos = pos;
+        return value;
+    }
+    value = (value | (buf[pos] & 127) << 14) >>> 0;
+    if (buf[pos++] < 128) {
+        this.pos = pos;
+        return value;
+    }
+    value = (value | (buf[pos] & 127) << 21) >>> 0;
+    if (buf[pos++] < 128) {
+        this.pos = pos;
+        return value;
+    }
+    this.pos = pos + 1;
+    if (buf[pos] > 7)
+        throw Error("invalid length encoding");
+    return (value | buf[pos] << 28) >>> 0;
 };
 
 /**
@@ -394,11 +454,301 @@ Reader.prototype.double = function read_double() {
 };
 
 /**
+ * Reads a packed repeated field of unsigned 32 bit varints.
+ * @param {number[]} [array] Array to read into; a new one is created if omitted
+ * @returns {number[]} Array read into
+ */
+Reader.prototype.uint32s = function read_uint32s(array) {
+    if (array === undefined) array = [];
+    var end = this.size() + this.pos, len = this.len, buf = this.buf, pos = this.pos, value;
+    if (end > len) throw indexOutOfRange(this, end - this.pos);
+    this.len = end;
+    while (pos < end) {
+        value = buf[pos++];
+        if (value < 128)
+            array.push(value);
+        else {
+            this.pos = pos - 1;
+            array.push(this.uint32());
+            pos = this.pos;
+        }
+    }
+    this.pos = pos;
+    if (pos !== end) throw RangeError("index out of range");
+    this.len = len;
+    return array;
+};
+
+/**
+ * Reads a packed repeated field of signed 32 bit varints.
+ * @param {number[]} [array] Array to read into; a new one is created if omitted
+ * @returns {number[]} Array read into
+ */
+Reader.prototype.int32s = function read_int32s(array) {
+    if (array === undefined) array = [];
+    var end = this.size() + this.pos, len = this.len, buf = this.buf, pos = this.pos, value;
+    if (end > len) throw indexOutOfRange(this, end - this.pos);
+    this.len = end;
+    while (pos < end) {
+        value = buf[pos++];
+        if (value < 128)
+            array.push(value);
+        else {
+            this.pos = pos - 1;
+            array.push(this.int32());
+            pos = this.pos;
+        }
+    }
+    this.pos = pos;
+    if (pos !== end) throw RangeError("index out of range");
+    this.len = len;
+    return array;
+};
+
+/**
+ * Reads a packed repeated field of zig-zag encoded signed 32 bit varints.
+ * @param {number[]} [array] Array to read into; a new one is created if omitted
+ * @returns {number[]} Array read into
+ */
+Reader.prototype.sint32s = function read_sint32s(array) {
+    if (array === undefined) array = [];
+    var end = this.size() + this.pos, len = this.len;
+    if (end > len) throw indexOutOfRange(this, end - this.pos);
+    this.len = end;
+    while (this.pos < end)
+        array.push(this.sint32());
+    if (this.pos !== end) throw RangeError("index out of range");
+    this.len = len;
+    return array;
+};
+
+/**
+ * Reads a packed repeated field of booleans.
+ * @param {boolean[]} [array] Array to read into; a new one is created if omitted
+ * @returns {boolean[]} Array read into
+ */
+Reader.prototype.bools = function read_bools(array) {
+    if (array === undefined) array = [];
+    var end = this.size() + this.pos, len = this.len, buf = this.buf, pos = this.pos, value;
+    if (end > len) throw indexOutOfRange(this, end - this.pos);
+    this.len = end;
+    while (pos < end) {
+        value = buf[pos++];
+        if (value < 128)
+            array.push(value !== 0);
+        else {
+            this.pos = pos - 1;
+            array.push(this.bool());
+            pos = this.pos;
+        }
+    }
+    this.pos = pos;
+    if (pos !== end) throw RangeError("index out of range");
+    this.len = len;
+    return array;
+};
+
+// The view allocation only pays off when amortized over enough reads
+var VIEW_THRESHOLD_FLOAT = 8,
+    VIEW_THRESHOLD_INT   = 128;
+
+function getLazyView(reader, count, threshold) {
+    var view = reader.view;
+    if (view || count < threshold)
+        return view;
+    var buf = reader.buf;
+    return reader.view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+}
+
+/**
+ * Reads a packed repeated field of unsigned 32 bit fixed values.
+ * @param {number[]} [array] Array to read into; a new one is created if omitted
+ * @returns {number[]} Array read into
+ */
+Reader.prototype.fixed32s = function read_fixed32s(array) {
+    if (array === undefined) array = [];
+    var len = this.size(), end = this.pos + len;
+    /* istanbul ignore if */
+    if (end > this.len) throw indexOutOfRange(this, len);
+    var count = len >>> 2, i = array.length, pos = this.pos;
+    array.length = i + count;
+    var dv = getLazyView(this, count, VIEW_THRESHOLD_INT);
+    if (dv)
+        for (var k = 0; k < count; ++k, pos += 4) array[i++] = dv.getUint32(pos, true);
+    else {
+        var buf = this.buf;
+        for (var j = 0; j < count; ++j, pos += 4) array[i++] = readFixed32_end(buf, pos + 4);
+    }
+    this.pos = pos;
+    if (pos !== end) throw indexOutOfRange(this, 4);
+    return array;
+};
+
+/**
+ * Reads a packed repeated field of signed 32 bit fixed values.
+ * @param {number[]} [array] Array to read into; a new one is created if omitted
+ * @returns {number[]} Array read into
+ */
+Reader.prototype.sfixed32s = function read_sfixed32s(array) {
+    if (array === undefined) array = [];
+    var len = this.size(), end = this.pos + len;
+    /* istanbul ignore if */
+    if (end > this.len) throw indexOutOfRange(this, len);
+    var count = len >>> 2, i = array.length, pos = this.pos;
+    array.length = i + count;
+    var dv = getLazyView(this, count, VIEW_THRESHOLD_INT);
+    if (dv)
+        for (var k = 0; k < count; ++k, pos += 4) array[i++] = dv.getInt32(pos, true);
+    else {
+        var buf = this.buf;
+        for (var j = 0; j < count; ++j, pos += 4) array[i++] = readFixed32_end(buf, pos + 4) | 0;
+    }
+    this.pos = pos;
+    if (pos !== end) throw indexOutOfRange(this, 4);
+    return array;
+};
+
+/**
+ * Reads a packed repeated field of floats (32 bit).
+ * @param {number[]} [array] Array to read into; a new one is created if omitted
+ * @returns {number[]} Array read into
+ */
+Reader.prototype.floats = function read_floats(array) {
+    if (array === undefined) array = [];
+    var len = this.size(), end = this.pos + len;
+    /* istanbul ignore if */
+    if (end > this.len) throw indexOutOfRange(this, len);
+    var count = len >>> 2, i = array.length, pos = this.pos;
+    array.length = i + count;
+    var dv = getLazyView(this, count, VIEW_THRESHOLD_FLOAT);
+    if (dv)
+        for (var k = 0; k < count; ++k, pos += 4) array[i++] = dv.getFloat32(pos, true);
+    else {
+        var buf = this.buf;
+        for (var j = 0; j < count; ++j, pos += 4) array[i++] = util.float.readFloatLE(buf, pos);
+    }
+    this.pos = pos;
+    if (pos !== end) throw indexOutOfRange(this, 4);
+    return array;
+};
+
+/**
+ * Reads a packed repeated field of doubles (64 bit float).
+ * @param {number[]} [array] Array to read into; a new one is created if omitted
+ * @returns {number[]} Array read into
+ */
+Reader.prototype.doubles = function read_doubles(array) {
+    if (array === undefined) array = [];
+    var len = this.size(), end = this.pos + len;
+    /* istanbul ignore if */
+    if (end > this.len) throw indexOutOfRange(this, len);
+    var count = len >>> 3, i = array.length, pos = this.pos;
+    array.length = i + count;
+    var dv = getLazyView(this, count, VIEW_THRESHOLD_FLOAT);
+    if (dv)
+        for (var k = 0; k < count; ++k, pos += 8) array[i++] = dv.getFloat64(pos, true);
+    else {
+        var buf = this.buf;
+        for (var j = 0; j < count; ++j, pos += 8) array[i++] = util.float.readDoubleLE(buf, pos);
+    }
+    this.pos = pos;
+    if (pos !== end) throw indexOutOfRange(this, 8);
+    return array;
+};
+
+/**
+ * Reads a packed repeated field of unsigned 64 bit varints.
+ * @param {Array.<Long|number>} [array] Array to read into; a new one is created if omitted
+ * @returns {Array.<Long|number>} Array read into
+ */
+Reader.prototype.uint64s = function read_uint64s(array) {
+    if (array === undefined) array = [];
+    var end = this.size() + this.pos, len = this.len;
+    if (end > len) throw indexOutOfRange(this, end - this.pos);
+    this.len = end;
+    while (this.pos < end)
+        array.push(this.uint64());
+    if (this.pos !== end) throw RangeError("index out of range");
+    this.len = len;
+    return array;
+};
+
+/**
+ * Reads a packed repeated field of signed 64 bit varints.
+ * @param {Array.<Long|number>} [array] Array to read into; a new one is created if omitted
+ * @returns {Array.<Long|number>} Array read into
+ */
+Reader.prototype.int64s = function read_int64s(array) {
+    if (array === undefined) array = [];
+    var end = this.size() + this.pos, len = this.len;
+    if (end > len) throw indexOutOfRange(this, end - this.pos);
+    this.len = end;
+    while (this.pos < end)
+        array.push(this.int64());
+    if (this.pos !== end) throw RangeError("index out of range");
+    this.len = len;
+    return array;
+};
+
+/**
+ * Reads a packed repeated field of zig-zag encoded signed 64 bit varints.
+ * @param {Array.<Long|number>} [array] Array to read into; a new one is created if omitted
+ * @returns {Array.<Long|number>} Array read into
+ */
+Reader.prototype.sint64s = function read_sint64s(array) {
+    if (array === undefined) array = [];
+    var end = this.size() + this.pos, len = this.len;
+    if (end > len) throw indexOutOfRange(this, end - this.pos);
+    this.len = end;
+    while (this.pos < end)
+        array.push(this.sint64());
+    if (this.pos !== end) throw RangeError("index out of range");
+    this.len = len;
+    return array;
+};
+
+/**
+ * Reads a packed repeated field of unsigned 64 bit fixed values.
+ * @param {Array.<Long|number>} [array] Array to read into; a new one is created if omitted
+ * @returns {Array.<Long|number>} Array read into
+ */
+Reader.prototype.fixed64s = function read_fixed64s(array) {
+    if (array === undefined) array = [];
+    var len = this.size(), end = this.pos + len, i = array.length;
+    /* istanbul ignore if */
+    if (end > this.len) throw indexOutOfRange(this, len);
+    var count = len >>> 3;
+    array.length = i + count; // 8 bytes per value, count is known
+    for (var j = 0; j < count; ++j)
+        array[i++] = this.fixed64();
+    if (this.pos !== end) throw indexOutOfRange(this, 8);
+    return array;
+};
+
+/**
+ * Reads a packed repeated field of signed 64 bit fixed values.
+ * @param {Array.<Long|number>} [array] Array to read into; a new one is created if omitted
+ * @returns {Array.<Long|number>} Array read into
+ */
+Reader.prototype.sfixed64s = function read_sfixed64s(array) {
+    if (array === undefined) array = [];
+    var len = this.size(), end = this.pos + len, i = array.length;
+    /* istanbul ignore if */
+    if (end > this.len) throw indexOutOfRange(this, len);
+    var count = len >>> 3;
+    array.length = i + count; // 8 bytes per value, count is known
+    for (var j = 0; j < count; ++j)
+        array[i++] = this.sfixed64();
+    if (this.pos !== end) throw indexOutOfRange(this, 8);
+    return array;
+};
+
+/**
  * Reads a sequence of bytes preceeded by its length as a varint.
  * @returns {Uint8Array} Value read
  */
 Reader.prototype.bytes = function read_bytes() {
-    var length = this.uint32(),
+    var length = this.size(),
         start  = this.pos,
         end    = this.pos + length;
 
@@ -415,7 +765,7 @@ Reader.prototype.bytes = function read_bytes() {
  * @returns {string} Value read
  */
 Reader.prototype.string = function read_string() {
-    var length = this.uint32(),
+    var length = this.size(),
         start  = this.pos,
         end    = this.pos + length;
 
@@ -432,7 +782,7 @@ Reader.prototype.string = function read_string() {
  * @returns {string} Value read
  */
 Reader.prototype.stringVerify = function read_string_verify() {
-    var length = this.uint32(),
+    var length = this.size(),
         start  = this.pos,
         end    = this.pos + length;
 
@@ -498,7 +848,7 @@ Reader.prototype.skipType = function(wireType, depth, fieldNumber) {
             this.skip(8);
             break;
         case 2:
-            this.skip(this.uint32());
+            this.skip(this.size());
             break;
         case 3:
             while (true) {

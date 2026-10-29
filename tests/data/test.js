@@ -5,7 +5,7 @@ var $protobuf = require("../../minimal");
 
 // Common aliases
 var $Reader = $protobuf.Reader, $Writer = $protobuf.Writer, $util = $protobuf.util;
-var $Object = $util.global.Object, $undefined = $util.global.undefined, $Error = $util.global.Error, $TypeError = $util.global.TypeError, $String = $util.global.String, $Array = $util.global.Array, $Boolean = $util.global.Boolean, $parseInt = $util.global.parseInt, $Number = $util.global.Number, $BigInt = $util.global.BigInt, $isFinite = $util.global.isFinite;
+var $Object = $util.global.Object, $undefined = $util.global.undefined, $Error = $util.global.Error, $RangeError = $util.global.RangeError, $TypeError = $util.global.TypeError, $String = $util.global.String, $Array = $util.global.Array, $Boolean = $util.global.Boolean, $parseInt = $util.global.parseInt, $Number = $util.global.Number, $BigInt = $util.global.BigInt, $isFinite = $util.global.isFinite;
 
 // Exported root namespace
 var $root = $protobuf.roots["test_test"] || ($protobuf.roots["test_test"] = {});
@@ -112,7 +112,7 @@ $root.jspb = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             Empty.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -133,7 +133,17 @@ $root.jspb = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.jspb.test.Empty();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.jspb.test.Empty();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -146,6 +156,11 @@ $root.jspb = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -165,7 +180,7 @@ $root.jspb = (function() {
             Empty.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -255,7 +270,7 @@ $root.jspb = (function() {
          * @property {number} BAR=2 BAR value
          */
         test.OuterEnum = (function() {
-            var valuesById = {}, values = $Object.create(valuesById);
+            var valuesById = $Object.create(null), values = $Object.create(valuesById);
             values[valuesById[1] = "FOO"] = 1;
             values[valuesById[2] = "BAR"] = 2;
             return values;
@@ -356,7 +371,7 @@ $root.jspb = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             EnumContainer.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -377,7 +392,17 @@ $root.jspb = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.jspb.test.EnumContainer();
+                var end, message, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.jspb.test.EnumContainer();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -390,7 +415,13 @@ $root.jspb = (function() {
                     case 1: {
                             if (wireType !== 0)
                                 break;
-                            message.outerEnum = reader.int32();
+                            value = reader.int32();
+                            if ($root.jspb.test.OuterEnum[value] !== $undefined)
+                                message.outerEnum = value;
+                            else if (!reader.discardUnknown) {
+                                $util.makeProp(message, "$unknowns", false);
+                                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                            }
                             continue;
                         }
                     }
@@ -399,6 +430,11 @@ $root.jspb = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -418,7 +454,7 @@ $root.jspb = (function() {
             EnumContainer.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -466,12 +502,6 @@ $root.jspb = (function() {
                     throw $Error("max depth exceeded");
                 var message = new $root.jspb.test.EnumContainer();
                 switch (object.outerEnum) {
-                default:
-                    if (typeof object.outerEnum === "number") {
-                        message.outerEnum = object.outerEnum;
-                        break;
-                    }
-                    break;
                 case "FOO":
                 case 1:
                     message.outerEnum = 1;
@@ -480,6 +510,7 @@ $root.jspb = (function() {
                 case 2:
                     message.outerEnum = 2;
                     break;
+                default:
                 }
                 return message;
             };
@@ -654,7 +685,7 @@ $root.jspb = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             Simple1.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -675,7 +706,17 @@ $root.jspb = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.jspb.test.Simple1();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.jspb.test.Simple1();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -712,6 +753,11 @@ $root.jspb = (function() {
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
                 }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
+                }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
                 if (!$Object.hasOwnProperty.call(message, "aString"))
@@ -732,7 +778,7 @@ $root.jspb = (function() {
             Simple1.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -967,7 +1013,7 @@ $root.jspb = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             Simple2.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -988,7 +1034,17 @@ $root.jspb = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.jspb.test.Simple2();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.jspb.test.Simple2();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -1019,6 +1075,11 @@ $root.jspb = (function() {
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
                 }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
+                }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
                 if (!$Object.hasOwnProperty.call(message, "aString"))
@@ -1039,7 +1100,7 @@ $root.jspb = (function() {
             Simple2.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -1282,7 +1343,7 @@ $root.jspb = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             SpecialCases.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -1303,7 +1364,17 @@ $root.jspb = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.jspb.test.SpecialCases();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.jspb.test.SpecialCases();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -1344,6 +1415,11 @@ $root.jspb = (function() {
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
                 }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
+                }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
                 if (!$Object.hasOwnProperty.call(message, "normal"))
@@ -1370,7 +1446,7 @@ $root.jspb = (function() {
             SpecialCases.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -1632,7 +1708,7 @@ $root.jspb = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             OptionalFields.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -1653,7 +1729,17 @@ $root.jspb = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.jspb.test.OptionalFields();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.jspb.test.OptionalFields();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -1678,7 +1764,7 @@ $root.jspb = (function() {
                     case 3: {
                             if (wireType !== 2)
                                 break;
-                            message.aNestedMessage = $root.jspb.test.OptionalFields.Nested.decode(reader, reader.uint32(), $undefined, _depth + 1, message.aNestedMessage);
+                            message.aNestedMessage = $root.jspb.test.OptionalFields.Nested.decode(reader, reader.size(), $undefined, _depth + 1, message.aNestedMessage);
                             continue;
                         }
                     case 4: {
@@ -1686,7 +1772,7 @@ $root.jspb = (function() {
                                 break;
                             if (!(message.aRepeatedMessage && message.aRepeatedMessage.length))
                                 message.aRepeatedMessage = [];
-                            message.aRepeatedMessage.push($root.jspb.test.OptionalFields.Nested.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message.aRepeatedMessage.push($root.jspb.test.OptionalFields.Nested.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     case 5: {
@@ -1703,6 +1789,11 @@ $root.jspb = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -1724,7 +1815,7 @@ $root.jspb = (function() {
             OptionalFields.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -1983,7 +2074,7 @@ $root.jspb = (function() {
                  * @returns {$protobuf.Writer} Writer
                  */
                 Nested.encodeDelimited = function(message, writer) {
-                    return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                    return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                 };
 
                 /**
@@ -2004,7 +2095,17 @@ $root.jspb = (function() {
                         _depth = 0;
                     if (_depth > $Reader.recursionLimit)
                         throw $Error("max depth exceeded");
-                    var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.jspb.test.OptionalFields.Nested();
+                    var end, message;
+                    if (length === $undefined)
+                        end = reader.len;
+                    else {
+                        end = reader.pos + length;
+                        if (end > reader.len)
+                            throw $RangeError("index out of range");
+                        length = reader.len;
+                        reader.len = end;
+                    }
+                    message = _target || new $root.jspb.test.OptionalFields.Nested();
                     while (reader.pos < end) {
                         var start = reader.pos;
                         var tag = reader.tag();
@@ -2027,6 +2128,11 @@ $root.jspb = (function() {
                             (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                         }
                     }
+                    if (length !== $undefined) {
+                        if (reader.pos !== end)
+                            throw $RangeError("index out of range");
+                        reader.len = length;
+                    }
                     if (_end !== $undefined)
                         throw $Error("missing end group");
                     return message;
@@ -2045,7 +2151,7 @@ $root.jspb = (function() {
                 Nested.decodeDelimited = function(reader) {
                     if (!(reader instanceof $Reader))
                         reader = new $Reader(reader);
-                    return this.decode(reader, reader.uint32());
+                    return this.decode(reader, reader.size());
                 };
 
                 /**
@@ -2299,7 +2405,7 @@ $root.jspb = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             HasExtensions.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -2320,7 +2426,17 @@ $root.jspb = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.jspb.test.HasExtensions();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.jspb.test.HasExtensions();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -2351,13 +2467,13 @@ $root.jspb = (function() {
                     case 100: {
                             if (wireType !== 2)
                                 break;
-                            message[".jspb.test.IsExtension.extField"] = $root.jspb.test.IsExtension.decode(reader, reader.uint32(), $undefined, _depth + 1, message[".jspb.test.IsExtension.extField"]);
+                            message[".jspb.test.IsExtension.extField"] = $root.jspb.test.IsExtension.decode(reader, reader.size(), $undefined, _depth + 1, message[".jspb.test.IsExtension.extField"]);
                             continue;
                         }
                     case 101: {
                             if (wireType !== 2)
                                 break;
-                            message[".jspb.test.IndirectExtension.simple"] = $root.jspb.test.Simple1.decode(reader, reader.uint32(), $undefined, _depth + 1, message[".jspb.test.IndirectExtension.simple"]);
+                            message[".jspb.test.IndirectExtension.simple"] = $root.jspb.test.Simple1.decode(reader, reader.size(), $undefined, _depth + 1, message[".jspb.test.IndirectExtension.simple"]);
                             continue;
                         }
                     case 102: {
@@ -2379,13 +2495,13 @@ $root.jspb = (function() {
                                 break;
                             if (!(message[".jspb.test.IndirectExtension.repeatedSimple"] && message[".jspb.test.IndirectExtension.repeatedSimple"].length))
                                 message[".jspb.test.IndirectExtension.repeatedSimple"] = [];
-                            message[".jspb.test.IndirectExtension.repeatedSimple"].push($root.jspb.test.Simple1.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message[".jspb.test.IndirectExtension.repeatedSimple"].push($root.jspb.test.Simple1.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     case 105: {
                             if (wireType !== 2)
                                 break;
-                            message[".jspb.test.simple1"] = $root.jspb.test.Simple1.decode(reader, reader.uint32(), $undefined, _depth + 1, message[".jspb.test.simple1"]);
+                            message[".jspb.test.simple1"] = $root.jspb.test.Simple1.decode(reader, reader.size(), $undefined, _depth + 1, message[".jspb.test.simple1"]);
                             continue;
                         }
                     }
@@ -2394,6 +2510,11 @@ $root.jspb = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -2413,7 +2534,7 @@ $root.jspb = (function() {
             HasExtensions.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -2764,7 +2885,7 @@ $root.jspb = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             Complex.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -2785,7 +2906,17 @@ $root.jspb = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.jspb.test.Complex();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.jspb.test.Complex();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -2810,7 +2941,7 @@ $root.jspb = (function() {
                     case 4: {
                             if (wireType !== 2)
                                 break;
-                            message.aNestedMessage = $root.jspb.test.Complex.Nested.decode(reader, reader.uint32(), $undefined, _depth + 1, message.aNestedMessage);
+                            message.aNestedMessage = $root.jspb.test.Complex.Nested.decode(reader, reader.size(), $undefined, _depth + 1, message.aNestedMessage);
                             continue;
                         }
                     case 5: {
@@ -2818,7 +2949,7 @@ $root.jspb = (function() {
                                 break;
                             if (!(message.aRepeatedMessage && message.aRepeatedMessage.length))
                                 message.aRepeatedMessage = [];
-                            message.aRepeatedMessage.push($root.jspb.test.Complex.Nested.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message.aRepeatedMessage.push($root.jspb.test.Complex.Nested.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     case 7: {
@@ -2835,6 +2966,11 @@ $root.jspb = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -2858,7 +2994,7 @@ $root.jspb = (function() {
             Complex.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -3115,7 +3251,7 @@ $root.jspb = (function() {
                  * @returns {$protobuf.Writer} Writer
                  */
                 Nested.encodeDelimited = function(message, writer) {
-                    return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                    return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                 };
 
                 /**
@@ -3136,7 +3272,17 @@ $root.jspb = (function() {
                         _depth = 0;
                     if (_depth > $Reader.recursionLimit)
                         throw $Error("max depth exceeded");
-                    var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.jspb.test.Complex.Nested();
+                    var end, message;
+                    if (length === $undefined)
+                        end = reader.len;
+                    else {
+                        end = reader.pos + length;
+                        if (end > reader.len)
+                            throw $RangeError("index out of range");
+                        length = reader.len;
+                        reader.len = end;
+                    }
+                    message = _target || new $root.jspb.test.Complex.Nested();
                     while (reader.pos < end) {
                         var start = reader.pos;
                         var tag = reader.tag();
@@ -3159,6 +3305,11 @@ $root.jspb = (function() {
                             (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                         }
                     }
+                    if (length !== $undefined) {
+                        if (reader.pos !== end)
+                            throw $RangeError("index out of range");
+                        reader.len = length;
+                    }
                     if (_end !== $undefined)
                         throw $Error("missing end group");
                     if (!$Object.hasOwnProperty.call(message, "anInt"))
@@ -3179,7 +3330,7 @@ $root.jspb = (function() {
                 Nested.decodeDelimited = function(reader) {
                     if (!(reader instanceof $Reader))
                         reader = new $Reader(reader);
-                    return this.decode(reader, reader.uint32());
+                    return this.decode(reader, reader.size());
                 };
 
                 /**
@@ -3364,7 +3515,7 @@ $root.jspb = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             OuterMessage.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -3385,7 +3536,17 @@ $root.jspb = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.jspb.test.OuterMessage();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.jspb.test.OuterMessage();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -3398,6 +3559,11 @@ $root.jspb = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -3417,7 +3583,7 @@ $root.jspb = (function() {
             OuterMessage.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -3591,7 +3757,7 @@ $root.jspb = (function() {
                  * @returns {$protobuf.Writer} Writer
                  */
                 Complex.encodeDelimited = function(message, writer) {
-                    return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                    return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                 };
 
                 /**
@@ -3612,7 +3778,17 @@ $root.jspb = (function() {
                         _depth = 0;
                     if (_depth > $Reader.recursionLimit)
                         throw $Error("max depth exceeded");
-                    var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.jspb.test.OuterMessage.Complex();
+                    var end, message;
+                    if (length === $undefined)
+                        end = reader.len;
+                    else {
+                        end = reader.pos + length;
+                        if (end > reader.len)
+                            throw $RangeError("index out of range");
+                        length = reader.len;
+                        reader.len = end;
+                    }
+                    message = _target || new $root.jspb.test.OuterMessage.Complex();
                     while (reader.pos < end) {
                         var start = reader.pos;
                         var tag = reader.tag();
@@ -3635,6 +3811,11 @@ $root.jspb = (function() {
                             (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                         }
                     }
+                    if (length !== $undefined) {
+                        if (reader.pos !== end)
+                            throw $RangeError("index out of range");
+                        reader.len = length;
+                    }
                     if (_end !== $undefined)
                         throw $Error("missing end group");
                     return message;
@@ -3653,7 +3834,7 @@ $root.jspb = (function() {
                 Complex.decodeDelimited = function(reader) {
                     if (!(reader instanceof $Reader))
                         reader = new $Reader(reader);
-                    return this.decode(reader, reader.uint32());
+                    return this.decode(reader, reader.size());
                 };
 
                 /**
@@ -3850,7 +4031,7 @@ $root.jspb = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             IsExtension.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -3871,7 +4052,17 @@ $root.jspb = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.jspb.test.IsExtension();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.jspb.test.IsExtension();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -3894,6 +4085,11 @@ $root.jspb = (function() {
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
                 }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
+                }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
                 return message;
@@ -3912,7 +4108,7 @@ $root.jspb = (function() {
             IsExtension.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -4095,7 +4291,7 @@ $root.jspb = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             IndirectExtension.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -4116,7 +4312,17 @@ $root.jspb = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.jspb.test.IndirectExtension();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.jspb.test.IndirectExtension();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -4129,6 +4335,11 @@ $root.jspb = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -4148,7 +4359,7 @@ $root.jspb = (function() {
             IndirectExtension.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -4278,7 +4489,7 @@ $root.jspb = (function() {
              * @memberof jspb.test.DefaultValues
              * @instance
              */
-            DefaultValues.prototype.stringField = "default<>abc";
+            DefaultValues.prototype.stringField = "default<>'\"abc";
 
             /**
              * DefaultValues boolField.
@@ -4380,7 +4591,7 @@ $root.jspb = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             DefaultValues.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -4401,7 +4612,17 @@ $root.jspb = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.jspb.test.DefaultValues();
+                var end, message, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.jspb.test.DefaultValues();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -4432,7 +4653,13 @@ $root.jspb = (function() {
                     case 4: {
                             if (wireType !== 0)
                                 break;
-                            message.enumField = reader.int32();
+                            value = reader.int32();
+                            if ($root.jspb.test.DefaultValues.Enum[value] !== $undefined)
+                                message.enumField = value;
+                            else if (!reader.discardUnknown) {
+                                $util.makeProp(message, "$unknowns", false);
+                                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                            }
                             continue;
                         }
                     case 6: {
@@ -4454,6 +4681,11 @@ $root.jspb = (function() {
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
                 }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
+                }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
                 return message;
@@ -4472,7 +4704,7 @@ $root.jspb = (function() {
             DefaultValues.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -4548,12 +4780,6 @@ $root.jspb = (function() {
                     else if (typeof object.intField === "object")
                         message.intField = new $util.LongBits(object.intField.low >>> 0, object.intField.high >>> 0).toNumber();
                 switch (object.enumField) {
-                default:
-                    if (typeof object.enumField === "number") {
-                        message.enumField = object.enumField;
-                        break;
-                    }
-                    break;
                 case "E1":
                 case 13:
                     message.enumField = 13;
@@ -4562,6 +4788,7 @@ $root.jspb = (function() {
                 case 77:
                     message.enumField = 77;
                     break;
+                default:
                 }
                 if (object.emptyField != null)
                     message.emptyField = $String(object.emptyField);
@@ -4591,7 +4818,7 @@ $root.jspb = (function() {
                     throw $Error("max depth exceeded");
                 var object = {};
                 if (options.defaults) {
-                    object.stringField = "default<>abc";
+                    object.stringField = "default<>'\"abc";
                     object.boolField = true;
                     if ($util.Long) {
                         var long = new $util.Long(11, 0, false);
@@ -4601,7 +4828,7 @@ $root.jspb = (function() {
                     object.enumField = options.enums === $String ? "E1" : 13;
                     object.emptyField = "";
                     if (options.bytes === $String)
-                        object.bytesField = "moo";
+                        object.bytesField = "bW9v";
                     else {
                         object.bytesField = [
                             109,
@@ -4665,7 +4892,7 @@ $root.jspb = (function() {
              * @property {number} E2=77 E2 value
              */
             DefaultValues.Enum = (function() {
-                var valuesById = {}, values = $Object.create(valuesById);
+                var valuesById = $Object.create(null), values = $Object.create(valuesById);
                 values[valuesById[13] = "E1"] = 13;
                 values[valuesById[77] = "E2"] = 77;
                 return values;
@@ -4848,7 +5075,7 @@ $root.jspb = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             FloatingPointFields.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -4869,7 +5096,17 @@ $root.jspb = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.jspb.test.FloatingPointFields();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.jspb.test.FloatingPointFields();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -4895,9 +5132,7 @@ $root.jspb = (function() {
                             if (wireType === 2) {
                                 if (!(message.repeatedFloatField && message.repeatedFloatField.length))
                                     message.repeatedFloatField = [];
-                                var end2 = reader.uint32() + reader.pos;
-                                while (reader.pos < end2)
-                                    message.repeatedFloatField.push(reader.float());
+                                reader.floats(message.repeatedFloatField);
                                 continue;
                             }
                             if (wireType !== 5)
@@ -4929,9 +5164,7 @@ $root.jspb = (function() {
                             if (wireType === 2) {
                                 if (!(message.repeatedDoubleField && message.repeatedDoubleField.length))
                                     message.repeatedDoubleField = [];
-                                var end2 = reader.uint32() + reader.pos;
-                                while (reader.pos < end2)
-                                    message.repeatedDoubleField.push(reader.double());
+                                reader.doubles(message.repeatedDoubleField);
                                 continue;
                             }
                             if (wireType !== 1)
@@ -4953,6 +5186,11 @@ $root.jspb = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -4976,7 +5214,7 @@ $root.jspb = (function() {
             FloatingPointFields.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -5303,7 +5541,7 @@ $root.jspb = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             TestClone.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -5324,7 +5562,17 @@ $root.jspb = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.jspb.test.TestClone();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.jspb.test.TestClone();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -5343,7 +5591,7 @@ $root.jspb = (function() {
                     case 3: {
                             if (wireType !== 2)
                                 break;
-                            message.simple1 = $root.jspb.test.Simple1.decode(reader, reader.uint32(), $undefined, _depth + 1, message.simple1);
+                            message.simple1 = $root.jspb.test.Simple1.decode(reader, reader.size(), $undefined, _depth + 1, message.simple1);
                             continue;
                         }
                     case 5: {
@@ -5351,7 +5599,7 @@ $root.jspb = (function() {
                                 break;
                             if (!(message.simple2 && message.simple2.length))
                                 message.simple2 = [];
-                            message.simple2.push($root.jspb.test.Simple1.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message.simple2.push($root.jspb.test.Simple1.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     case 6: {
@@ -5369,7 +5617,7 @@ $root.jspb = (function() {
                     case 100: {
                             if (wireType !== 2)
                                 break;
-                            message[".jspb.test.CloneExtension.extField"] = $root.jspb.test.CloneExtension.decode(reader, reader.uint32(), $undefined, _depth + 1, message[".jspb.test.CloneExtension.extField"]);
+                            message[".jspb.test.CloneExtension.extField"] = $root.jspb.test.CloneExtension.decode(reader, reader.size(), $undefined, _depth + 1, message[".jspb.test.CloneExtension.extField"]);
                             continue;
                         }
                     }
@@ -5378,6 +5626,11 @@ $root.jspb = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -5397,7 +5650,7 @@ $root.jspb = (function() {
             TestClone.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -5669,7 +5922,7 @@ $root.jspb = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             CloneExtension.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -5690,7 +5943,17 @@ $root.jspb = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.jspb.test.CloneExtension();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.jspb.test.CloneExtension();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -5713,6 +5976,11 @@ $root.jspb = (function() {
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
                 }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
+                }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
                 return message;
@@ -5731,7 +5999,7 @@ $root.jspb = (function() {
             CloneExtension.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -6002,7 +6270,7 @@ $root.jspb = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             TestGroup.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -6023,7 +6291,17 @@ $root.jspb = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.jspb.test.TestGroup();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.jspb.test.TestGroup();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -6074,13 +6352,13 @@ $root.jspb = (function() {
                     case 7: {
                             if (wireType !== 2)
                                 break;
-                            message.requiredSimple = $root.jspb.test.Simple2.decode(reader, reader.uint32(), $undefined, _depth + 1, message.requiredSimple);
+                            message.requiredSimple = $root.jspb.test.Simple2.decode(reader, reader.size(), $undefined, _depth + 1, message.requiredSimple);
                             continue;
                         }
                     case 8: {
                             if (wireType !== 2)
                                 break;
-                            message.optionalSimple = $root.jspb.test.Simple2.decode(reader, reader.uint32(), $undefined, _depth + 1, message.optionalSimple);
+                            message.optionalSimple = $root.jspb.test.Simple2.decode(reader, reader.size(), $undefined, _depth + 1, message.optionalSimple);
                             continue;
                         }
                     }
@@ -6089,6 +6367,11 @@ $root.jspb = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -6112,7 +6395,7 @@ $root.jspb = (function() {
             TestGroup.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -6420,7 +6703,7 @@ $root.jspb = (function() {
                  * @returns {$protobuf.Writer} Writer
                  */
                 RepeatedGroup.encodeDelimited = function(message, writer) {
-                    return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                    return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                 };
 
                 /**
@@ -6441,7 +6724,17 @@ $root.jspb = (function() {
                         _depth = 0;
                     if (_depth > $Reader.recursionLimit)
                         throw $Error("max depth exceeded");
-                    var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.jspb.test.TestGroup.RepeatedGroup();
+                    var end, message;
+                    if (length === $undefined)
+                        end = reader.len;
+                    else {
+                        end = reader.pos + length;
+                        if (end > reader.len)
+                            throw $RangeError("index out of range");
+                        length = reader.len;
+                        reader.len = end;
+                    }
+                    message = _target || new $root.jspb.test.TestGroup.RepeatedGroup();
                     while (reader.pos < end) {
                         var start = reader.pos;
                         var tag = reader.tag();
@@ -6461,9 +6754,7 @@ $root.jspb = (function() {
                                 if (wireType === 2) {
                                     if (!(message.someBool && message.someBool.length))
                                         message.someBool = [];
-                                    var end2 = reader.uint32() + reader.pos;
-                                    while (reader.pos < end2)
-                                        message.someBool.push(reader.bool());
+                                    reader.bools(message.someBool);
                                     continue;
                                 }
                                 if (wireType !== 0)
@@ -6479,6 +6770,11 @@ $root.jspb = (function() {
                             $util.makeProp(message, "$unknowns", false);
                             (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                         }
+                    }
+                    if (length !== $undefined) {
+                        if (reader.pos !== end)
+                            throw $RangeError("index out of range");
+                        reader.len = length;
                     }
                     if (_end !== $undefined)
                         throw $Error("missing end group");
@@ -6500,7 +6796,7 @@ $root.jspb = (function() {
                 RepeatedGroup.decodeDelimited = function(reader) {
                     if (!(reader instanceof $Reader))
                         reader = new $Reader(reader);
-                    return this.decode(reader, reader.uint32());
+                    return this.decode(reader, reader.size());
                 };
 
                 /**
@@ -6713,7 +7009,7 @@ $root.jspb = (function() {
                  * @returns {$protobuf.Writer} Writer
                  */
                 RequiredGroup.encodeDelimited = function(message, writer) {
-                    return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                    return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                 };
 
                 /**
@@ -6734,7 +7030,17 @@ $root.jspb = (function() {
                         _depth = 0;
                     if (_depth > $Reader.recursionLimit)
                         throw $Error("max depth exceeded");
-                    var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.jspb.test.TestGroup.RequiredGroup();
+                    var end, message;
+                    if (length === $undefined)
+                        end = reader.len;
+                    else {
+                        end = reader.pos + length;
+                        if (end > reader.len)
+                            throw $RangeError("index out of range");
+                        length = reader.len;
+                        reader.len = end;
+                    }
+                    message = _target || new $root.jspb.test.TestGroup.RequiredGroup();
                     while (reader.pos < end) {
                         var start = reader.pos;
                         var tag = reader.tag();
@@ -6757,6 +7063,11 @@ $root.jspb = (function() {
                             (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                         }
                     }
+                    if (length !== $undefined) {
+                        if (reader.pos !== end)
+                            throw $RangeError("index out of range");
+                        reader.len = length;
+                    }
                     if (_end !== $undefined)
                         throw $Error("missing end group");
                     if (!$Object.hasOwnProperty.call(message, "id"))
@@ -6777,7 +7088,7 @@ $root.jspb = (function() {
                 RequiredGroup.decodeDelimited = function(reader) {
                     if (!(reader instanceof $Reader))
                         reader = new $Reader(reader);
-                    return this.decode(reader, reader.uint32());
+                    return this.decode(reader, reader.size());
                 };
 
                 /**
@@ -6969,7 +7280,7 @@ $root.jspb = (function() {
                  * @returns {$protobuf.Writer} Writer
                  */
                 OptionalGroup.encodeDelimited = function(message, writer) {
-                    return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                    return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                 };
 
                 /**
@@ -6990,7 +7301,17 @@ $root.jspb = (function() {
                         _depth = 0;
                     if (_depth > $Reader.recursionLimit)
                         throw $Error("max depth exceeded");
-                    var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.jspb.test.TestGroup.OptionalGroup();
+                    var end, message;
+                    if (length === $undefined)
+                        end = reader.len;
+                    else {
+                        end = reader.pos + length;
+                        if (end > reader.len)
+                            throw $RangeError("index out of range");
+                        length = reader.len;
+                        reader.len = end;
+                    }
+                    message = _target || new $root.jspb.test.TestGroup.OptionalGroup();
                     while (reader.pos < end) {
                         var start = reader.pos;
                         var tag = reader.tag();
@@ -7013,6 +7334,11 @@ $root.jspb = (function() {
                             (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                         }
                     }
+                    if (length !== $undefined) {
+                        if (reader.pos !== end)
+                            throw $RangeError("index out of range");
+                        reader.len = length;
+                    }
                     if (_end !== $undefined)
                         throw $Error("missing end group");
                     if (!$Object.hasOwnProperty.call(message, "id"))
@@ -7033,7 +7359,7 @@ $root.jspb = (function() {
                 OptionalGroup.decodeDelimited = function(reader) {
                     if (!(reader instanceof $Reader))
                         reader = new $Reader(reader);
-                    return this.decode(reader, reader.uint32());
+                    return this.decode(reader, reader.size());
                 };
 
                 /**
@@ -7225,7 +7551,7 @@ $root.jspb = (function() {
                  * @returns {$protobuf.Writer} Writer
                  */
                 MessageInGroup.encodeDelimited = function(message, writer) {
-                    return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                    return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                 };
 
                 /**
@@ -7246,7 +7572,17 @@ $root.jspb = (function() {
                         _depth = 0;
                     if (_depth > $Reader.recursionLimit)
                         throw $Error("max depth exceeded");
-                    var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.jspb.test.TestGroup.MessageInGroup();
+                    var end, message;
+                    if (length === $undefined)
+                        end = reader.len;
+                    else {
+                        end = reader.pos + length;
+                        if (end > reader.len)
+                            throw $RangeError("index out of range");
+                        length = reader.len;
+                        reader.len = end;
+                    }
+                    message = _target || new $root.jspb.test.TestGroup.MessageInGroup();
                     while (reader.pos < end) {
                         var start = reader.pos;
                         var tag = reader.tag();
@@ -7259,7 +7595,7 @@ $root.jspb = (function() {
                         case 1: {
                                 if (wireType !== 2)
                                     break;
-                                message.id = $root.jspb.test.TestGroup.MessageInGroup.NestedMessage.decode(reader, reader.uint32(), $undefined, _depth + 1, message.id);
+                                message.id = $root.jspb.test.TestGroup.MessageInGroup.NestedMessage.decode(reader, reader.size(), $undefined, _depth + 1, message.id);
                                 continue;
                             }
                         }
@@ -7268,6 +7604,11 @@ $root.jspb = (function() {
                             $util.makeProp(message, "$unknowns", false);
                             (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                         }
+                    }
+                    if (length !== $undefined) {
+                        if (reader.pos !== end)
+                            throw $RangeError("index out of range");
+                        reader.len = length;
                     }
                     if (_end !== $undefined)
                         throw $Error("missing end group");
@@ -7289,7 +7630,7 @@ $root.jspb = (function() {
                 MessageInGroup.decodeDelimited = function(reader) {
                     if (!(reader instanceof $Reader))
                         reader = new $Reader(reader);
-                    return this.decode(reader, reader.uint32());
+                    return this.decode(reader, reader.size());
                 };
 
                 /**
@@ -7485,7 +7826,7 @@ $root.jspb = (function() {
                      * @returns {$protobuf.Writer} Writer
                      */
                     NestedMessage.encodeDelimited = function(message, writer) {
-                        return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                        return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                     };
 
                     /**
@@ -7506,7 +7847,17 @@ $root.jspb = (function() {
                             _depth = 0;
                         if (_depth > $Reader.recursionLimit)
                             throw $Error("max depth exceeded");
-                        var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.jspb.test.TestGroup.MessageInGroup.NestedMessage();
+                        var end, message;
+                        if (length === $undefined)
+                            end = reader.len;
+                        else {
+                            end = reader.pos + length;
+                            if (end > reader.len)
+                                throw $RangeError("index out of range");
+                            length = reader.len;
+                            reader.len = end;
+                        }
+                        message = _target || new $root.jspb.test.TestGroup.MessageInGroup.NestedMessage();
                         while (reader.pos < end) {
                             var start = reader.pos;
                             var tag = reader.tag();
@@ -7529,6 +7880,11 @@ $root.jspb = (function() {
                                 (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                             }
                         }
+                        if (length !== $undefined) {
+                            if (reader.pos !== end)
+                                throw $RangeError("index out of range");
+                            reader.len = length;
+                        }
                         if (_end !== $undefined)
                             throw $Error("missing end group");
                         return message;
@@ -7547,7 +7903,7 @@ $root.jspb = (function() {
                     NestedMessage.decodeDelimited = function(reader) {
                         if (!(reader instanceof $Reader))
                             reader = new $Reader(reader);
-                        return this.decode(reader, reader.uint32());
+                        return this.decode(reader, reader.size());
                     };
 
                     /**
@@ -7743,7 +8099,7 @@ $root.jspb = (function() {
                  * @returns {$protobuf.Writer} Writer
                  */
                 EnumInGroup.encodeDelimited = function(message, writer) {
-                    return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                    return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                 };
 
                 /**
@@ -7764,7 +8120,17 @@ $root.jspb = (function() {
                         _depth = 0;
                     if (_depth > $Reader.recursionLimit)
                         throw $Error("max depth exceeded");
-                    var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.jspb.test.TestGroup.EnumInGroup();
+                    var end, message, value;
+                    if (length === $undefined)
+                        end = reader.len;
+                    else {
+                        end = reader.pos + length;
+                        if (end > reader.len)
+                            throw $RangeError("index out of range");
+                        length = reader.len;
+                        reader.len = end;
+                    }
+                    message = _target || new $root.jspb.test.TestGroup.EnumInGroup();
                     while (reader.pos < end) {
                         var start = reader.pos;
                         var tag = reader.tag();
@@ -7777,7 +8143,13 @@ $root.jspb = (function() {
                         case 1: {
                                 if (wireType !== 0)
                                     break;
-                                message.id = reader.int32();
+                                value = reader.int32();
+                                if ($root.jspb.test.TestGroup.EnumInGroup.NestedEnum[value] !== $undefined)
+                                    message.id = value;
+                                else if (!reader.discardUnknown) {
+                                    $util.makeProp(message, "$unknowns", false);
+                                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                                }
                                 continue;
                             }
                         }
@@ -7786,6 +8158,11 @@ $root.jspb = (function() {
                             $util.makeProp(message, "$unknowns", false);
                             (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                         }
+                    }
+                    if (length !== $undefined) {
+                        if (reader.pos !== end)
+                            throw $RangeError("index out of range");
+                        reader.len = length;
                     }
                     if (_end !== $undefined)
                         throw $Error("missing end group");
@@ -7807,7 +8184,7 @@ $root.jspb = (function() {
                 EnumInGroup.decodeDelimited = function(reader) {
                     if (!(reader instanceof $Reader))
                         reader = new $Reader(reader);
-                    return this.decode(reader, reader.uint32());
+                    return this.decode(reader, reader.size());
                 };
 
                 /**
@@ -7854,12 +8231,6 @@ $root.jspb = (function() {
                         throw $Error("max depth exceeded");
                     var message = new $root.jspb.test.TestGroup.EnumInGroup();
                     switch (object.id) {
-                    default:
-                        if (typeof object.id === "number") {
-                            message.id = object.id;
-                            break;
-                        }
-                        break;
                     case "first":
                     case 0:
                         message.id = 0;
@@ -7868,6 +8239,7 @@ $root.jspb = (function() {
                     case 1:
                         message.id = 1;
                         break;
+                    default:
                     }
                     return message;
                 };
@@ -7929,7 +8301,7 @@ $root.jspb = (function() {
                  * @property {number} second=1 second value
                  */
                 EnumInGroup.NestedEnum = (function() {
-                    var valuesById = {}, values = $Object.create(valuesById);
+                    var valuesById = $Object.create(null), values = $Object.create(valuesById);
                     values[valuesById[0] = "first"] = 0;
                     values[valuesById[1] = "second"] = 1;
                     return values;
@@ -8036,7 +8408,7 @@ $root.jspb = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             TestGroup1.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -8057,7 +8429,17 @@ $root.jspb = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.jspb.test.TestGroup1();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.jspb.test.TestGroup1();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -8070,7 +8452,7 @@ $root.jspb = (function() {
                     case 1: {
                             if (wireType !== 2)
                                 break;
-                            message.group = $root.jspb.test.TestGroup.RepeatedGroup.decode(reader, reader.uint32(), $undefined, _depth + 1, message.group);
+                            message.group = $root.jspb.test.TestGroup.RepeatedGroup.decode(reader, reader.size(), $undefined, _depth + 1, message.group);
                             continue;
                         }
                     }
@@ -8079,6 +8461,11 @@ $root.jspb = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -8098,7 +8485,7 @@ $root.jspb = (function() {
             TestGroup1.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -8303,7 +8690,7 @@ $root.jspb = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             TestReservedNames.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -8324,7 +8711,17 @@ $root.jspb = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.jspb.test.TestReservedNames();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.jspb.test.TestReservedNames();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -8353,6 +8750,11 @@ $root.jspb = (function() {
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
                 }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
+                }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
                 return message;
@@ -8371,7 +8773,7 @@ $root.jspb = (function() {
             TestReservedNames.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -8563,7 +8965,7 @@ $root.jspb = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             TestReservedNamesExtension.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -8584,7 +8986,17 @@ $root.jspb = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.jspb.test.TestReservedNamesExtension();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.jspb.test.TestReservedNamesExtension();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -8597,6 +9009,11 @@ $root.jspb = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -8616,7 +9033,7 @@ $root.jspb = (function() {
             TestReservedNamesExtension.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -8965,7 +9382,7 @@ $root.jspb = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             TestMessageWithOneof.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -8986,7 +9403,17 @@ $root.jspb = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.jspb.test.TestMessageWithOneof();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.jspb.test.TestMessageWithOneof();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -9013,7 +9440,7 @@ $root.jspb = (function() {
                     case 6: {
                             if (wireType !== 2)
                                 break;
-                            message.rone = $root.jspb.test.TestMessageWithOneof.decode(reader, reader.uint32(), $undefined, _depth + 1, message.rone);
+                            message.rone = $root.jspb.test.TestMessageWithOneof.decode(reader, reader.size(), $undefined, _depth + 1, message.rone);
                             message.recursiveOneof = "rone";
                             continue;
                         }
@@ -9073,6 +9500,11 @@ $root.jspb = (function() {
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
                 }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
+                }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
                 return message;
@@ -9091,7 +9523,7 @@ $root.jspb = (function() {
             TestMessageWithOneof.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -9428,7 +9860,7 @@ $root.jspb = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             TestEndsWithBytes.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -9449,7 +9881,17 @@ $root.jspb = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.jspb.test.TestEndsWithBytes();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.jspb.test.TestEndsWithBytes();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -9478,6 +9920,11 @@ $root.jspb = (function() {
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
                 }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
+                }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
                 return message;
@@ -9496,7 +9943,7 @@ $root.jspb = (function() {
             TestEndsWithBytes.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -9855,7 +10302,7 @@ $root.jspb = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             TestMapFieldsNoBinary.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -9876,7 +10323,17 @@ $root.jspb = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.jspb.test.TestMapFieldsNoBinary(), key, value;
+                var end, message, key, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.jspb.test.TestMapFieldsNoBinary();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -9891,7 +10348,10 @@ $root.jspb = (function() {
                                 break;
                             if (message.mapStringString === $util.emptyObject)
                                 message.mapStringString = {};
-                            var end2 = reader.uint32() + reader.pos;
+                            var end2 = reader.size() + reader.pos;
+                            if (end2 > reader.len)
+                                throw $RangeError("index out of range");
+                            reader.len = end2;
                             key = "";
                             value = "";
                             while (reader.pos < end2) {
@@ -9911,6 +10371,9 @@ $root.jspb = (function() {
                                 }
                                 reader.skipType(wireType, _depth, tag2);
                             }
+                            if (reader.pos !== end2)
+                                throw $RangeError("index out of range");
+                            reader.len = end;
                             if (key === "__proto__")
                                 $util.makeProp(message.mapStringString, key);
                             message.mapStringString[key] = value;
@@ -9921,7 +10384,10 @@ $root.jspb = (function() {
                                 break;
                             if (message.mapStringInt32 === $util.emptyObject)
                                 message.mapStringInt32 = {};
-                            var end2 = reader.uint32() + reader.pos;
+                            var end2 = reader.size() + reader.pos;
+                            if (end2 > reader.len)
+                                throw $RangeError("index out of range");
+                            reader.len = end2;
                             key = "";
                             value = 0;
                             while (reader.pos < end2) {
@@ -9941,6 +10407,9 @@ $root.jspb = (function() {
                                 }
                                 reader.skipType(wireType, _depth, tag2);
                             }
+                            if (reader.pos !== end2)
+                                throw $RangeError("index out of range");
+                            reader.len = end;
                             if (key === "__proto__")
                                 $util.makeProp(message.mapStringInt32, key);
                             message.mapStringInt32[key] = value;
@@ -9951,7 +10420,10 @@ $root.jspb = (function() {
                                 break;
                             if (message.mapStringInt64 === $util.emptyObject)
                                 message.mapStringInt64 = {};
-                            var end2 = reader.uint32() + reader.pos;
+                            var end2 = reader.size() + reader.pos;
+                            if (end2 > reader.len)
+                                throw $RangeError("index out of range");
+                            reader.len = end2;
                             key = "";
                             value = $util.Long ? $util.Long.fromNumber(0, false) : 0;
                             while (reader.pos < end2) {
@@ -9971,6 +10443,9 @@ $root.jspb = (function() {
                                 }
                                 reader.skipType(wireType, _depth, tag2);
                             }
+                            if (reader.pos !== end2)
+                                throw $RangeError("index out of range");
+                            reader.len = end;
                             if (key === "__proto__")
                                 $util.makeProp(message.mapStringInt64, key);
                             message.mapStringInt64[key] = value;
@@ -9981,7 +10456,10 @@ $root.jspb = (function() {
                                 break;
                             if (message.mapStringBool === $util.emptyObject)
                                 message.mapStringBool = {};
-                            var end2 = reader.uint32() + reader.pos;
+                            var end2 = reader.size() + reader.pos;
+                            if (end2 > reader.len)
+                                throw $RangeError("index out of range");
+                            reader.len = end2;
                             key = "";
                             value = false;
                             while (reader.pos < end2) {
@@ -10001,6 +10479,9 @@ $root.jspb = (function() {
                                 }
                                 reader.skipType(wireType, _depth, tag2);
                             }
+                            if (reader.pos !== end2)
+                                throw $RangeError("index out of range");
+                            reader.len = end;
                             if (key === "__proto__")
                                 $util.makeProp(message.mapStringBool, key);
                             message.mapStringBool[key] = value;
@@ -10011,7 +10492,10 @@ $root.jspb = (function() {
                                 break;
                             if (message.mapStringDouble === $util.emptyObject)
                                 message.mapStringDouble = {};
-                            var end2 = reader.uint32() + reader.pos;
+                            var end2 = reader.size() + reader.pos;
+                            if (end2 > reader.len)
+                                throw $RangeError("index out of range");
+                            reader.len = end2;
                             key = "";
                             value = 0;
                             while (reader.pos < end2) {
@@ -10031,6 +10515,9 @@ $root.jspb = (function() {
                                 }
                                 reader.skipType(wireType, _depth, tag2);
                             }
+                            if (reader.pos !== end2)
+                                throw $RangeError("index out of range");
+                            reader.len = end;
                             if (key === "__proto__")
                                 $util.makeProp(message.mapStringDouble, key);
                             message.mapStringDouble[key] = value;
@@ -10039,9 +10526,10 @@ $root.jspb = (function() {
                     case 6: {
                             if (wireType !== 2)
                                 break;
-                            if (message.mapStringEnum === $util.emptyObject)
-                                message.mapStringEnum = {};
-                            var end2 = reader.uint32() + reader.pos;
+                            var end2 = reader.size() + reader.pos;
+                            if (end2 > reader.len)
+                                throw $RangeError("index out of range");
+                            reader.len = end2;
                             key = "";
                             value = 0;
                             while (reader.pos < end2) {
@@ -10061,6 +10549,18 @@ $root.jspb = (function() {
                                 }
                                 reader.skipType(wireType, _depth, tag2);
                             }
+                            if (reader.pos !== end2)
+                                throw $RangeError("index out of range");
+                            reader.len = end;
+                            if ($root.jspb.test.MapValueEnumNoBinary[value] === $undefined) {
+                                if (!reader.discardUnknown) {
+                                    $util.makeProp(message, "$unknowns", false);
+                                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                                }
+                                continue;
+                            }
+                            if (message.mapStringEnum === $util.emptyObject)
+                                message.mapStringEnum = {};
                             if (key === "__proto__")
                                 $util.makeProp(message.mapStringEnum, key);
                             message.mapStringEnum[key] = value;
@@ -10071,7 +10571,10 @@ $root.jspb = (function() {
                                 break;
                             if (message.mapStringMsg === $util.emptyObject)
                                 message.mapStringMsg = {};
-                            var end2 = reader.uint32() + reader.pos;
+                            var end2 = reader.size() + reader.pos;
+                            if (end2 > reader.len)
+                                throw $RangeError("index out of range");
+                            reader.len = end2;
                             key = "";
                             value = null;
                             while (reader.pos < end2) {
@@ -10086,11 +10589,14 @@ $root.jspb = (function() {
                                 case 2:
                                     if (wireType !== 2)
                                         break;
-                                    value = $root.jspb.test.MapValueMessageNoBinary.decode(reader, reader.uint32(), $undefined, _depth + 1);
+                                    value = $root.jspb.test.MapValueMessageNoBinary.decode(reader, reader.size(), $undefined, _depth + 1, value);
                                     continue;
                                 }
                                 reader.skipType(wireType, _depth, tag2);
                             }
+                            if (reader.pos !== end2)
+                                throw $RangeError("index out of range");
+                            reader.len = end;
                             if (key === "__proto__")
                                 $util.makeProp(message.mapStringMsg, key);
                             message.mapStringMsg[key] = value || new $root.jspb.test.MapValueMessageNoBinary();
@@ -10101,7 +10607,10 @@ $root.jspb = (function() {
                                 break;
                             if (message.mapInt32String === $util.emptyObject)
                                 message.mapInt32String = {};
-                            var end2 = reader.uint32() + reader.pos;
+                            var end2 = reader.size() + reader.pos;
+                            if (end2 > reader.len)
+                                throw $RangeError("index out of range");
+                            reader.len = end2;
                             key = 0;
                             value = "";
                             while (reader.pos < end2) {
@@ -10121,6 +10630,9 @@ $root.jspb = (function() {
                                 }
                                 reader.skipType(wireType, _depth, tag2);
                             }
+                            if (reader.pos !== end2)
+                                throw $RangeError("index out of range");
+                            reader.len = end;
                             message.mapInt32String[key] = value;
                             continue;
                         }
@@ -10129,7 +10641,10 @@ $root.jspb = (function() {
                                 break;
                             if (message.mapInt64String === $util.emptyObject)
                                 message.mapInt64String = {};
-                            var end2 = reader.uint32() + reader.pos;
+                            var end2 = reader.size() + reader.pos;
+                            if (end2 > reader.len)
+                                throw $RangeError("index out of range");
+                            reader.len = end2;
                             key = 0;
                             value = "";
                             while (reader.pos < end2) {
@@ -10149,6 +10664,9 @@ $root.jspb = (function() {
                                 }
                                 reader.skipType(wireType, _depth, tag2);
                             }
+                            if (reader.pos !== end2)
+                                throw $RangeError("index out of range");
+                            reader.len = end;
                             message.mapInt64String[typeof key === "object" ? $util.longToHash(key) : key] = value;
                             continue;
                         }
@@ -10157,7 +10675,10 @@ $root.jspb = (function() {
                                 break;
                             if (message.mapBoolString === $util.emptyObject)
                                 message.mapBoolString = {};
-                            var end2 = reader.uint32() + reader.pos;
+                            var end2 = reader.size() + reader.pos;
+                            if (end2 > reader.len)
+                                throw $RangeError("index out of range");
+                            reader.len = end2;
                             key = false;
                             value = "";
                             while (reader.pos < end2) {
@@ -10177,13 +10698,16 @@ $root.jspb = (function() {
                                 }
                                 reader.skipType(wireType, _depth, tag2);
                             }
+                            if (reader.pos !== end2)
+                                throw $RangeError("index out of range");
+                            reader.len = end;
                             message.mapBoolString[key] = value;
                             continue;
                         }
                     case 11: {
                             if (wireType !== 2)
                                 break;
-                            message.testMapFields = $root.jspb.test.TestMapFieldsNoBinary.decode(reader, reader.uint32(), $undefined, _depth + 1, message.testMapFields);
+                            message.testMapFields = $root.jspb.test.TestMapFieldsNoBinary.decode(reader, reader.size(), $undefined, _depth + 1, message.testMapFields);
                             continue;
                         }
                     case 12: {
@@ -10191,7 +10715,10 @@ $root.jspb = (function() {
                                 break;
                             if (message.mapStringTestmapfields === $util.emptyObject)
                                 message.mapStringTestmapfields = {};
-                            var end2 = reader.uint32() + reader.pos;
+                            var end2 = reader.size() + reader.pos;
+                            if (end2 > reader.len)
+                                throw $RangeError("index out of range");
+                            reader.len = end2;
                             key = "";
                             value = null;
                             while (reader.pos < end2) {
@@ -10206,11 +10733,14 @@ $root.jspb = (function() {
                                 case 2:
                                     if (wireType !== 2)
                                         break;
-                                    value = $root.jspb.test.TestMapFieldsNoBinary.decode(reader, reader.uint32(), $undefined, _depth + 1);
+                                    value = $root.jspb.test.TestMapFieldsNoBinary.decode(reader, reader.size(), $undefined, _depth + 1, value);
                                     continue;
                                 }
                                 reader.skipType(wireType, _depth, tag2);
                             }
+                            if (reader.pos !== end2)
+                                throw $RangeError("index out of range");
+                            reader.len = end;
                             if (key === "__proto__")
                                 $util.makeProp(message.mapStringTestmapfields, key);
                             message.mapStringTestmapfields[key] = value || new $root.jspb.test.TestMapFieldsNoBinary();
@@ -10222,6 +10752,11 @@ $root.jspb = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -10241,7 +10776,7 @@ $root.jspb = (function() {
             TestMapFieldsNoBinary.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -10457,12 +10992,6 @@ $root.jspb = (function() {
                         if (keys[i] === "__proto__")
                             $util.makeProp(message.mapStringEnum, keys[i]);
                         switch (object.mapStringEnum[keys[i]]) {
-                        default:
-                            if (typeof object.mapStringEnum[keys[i]] === "number") {
-                                message.mapStringEnum[keys[i]] = object.mapStringEnum[keys[i]];
-                                break;
-                            }
-                            break;
                         case "MAP_VALUE_FOO_NOBINARY":
                         case 0:
                             message.mapStringEnum[keys[i]] = 0;
@@ -10475,6 +11004,7 @@ $root.jspb = (function() {
                         case 2:
                             message.mapStringEnum[keys[i]] = 2;
                             break;
+                        default:
                         }
                     }
                 }
@@ -10709,7 +11239,7 @@ $root.jspb = (function() {
          * @property {number} MAP_VALUE_BAZ_NOBINARY=2 MAP_VALUE_BAZ_NOBINARY value
          */
         test.MapValueEnumNoBinary = (function() {
-            var valuesById = {}, values = $Object.create(valuesById);
+            var valuesById = $Object.create(null), values = $Object.create(valuesById);
             values[valuesById[0] = "MAP_VALUE_FOO_NOBINARY"] = 0;
             values[valuesById[1] = "MAP_VALUE_BAR_NOBINARY"] = 1;
             values[valuesById[2] = "MAP_VALUE_BAZ_NOBINARY"] = 2;
@@ -10811,7 +11341,7 @@ $root.jspb = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             MapValueMessageNoBinary.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -10832,7 +11362,17 @@ $root.jspb = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.jspb.test.MapValueMessageNoBinary();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.jspb.test.MapValueMessageNoBinary();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -10855,6 +11395,11 @@ $root.jspb = (function() {
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
                 }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
+                }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
                 return message;
@@ -10873,7 +11418,7 @@ $root.jspb = (function() {
             MapValueMessageNoBinary.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -11056,7 +11601,7 @@ $root.jspb = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             Deeply.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -11077,7 +11622,17 @@ $root.jspb = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.jspb.test.Deeply();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.jspb.test.Deeply();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -11090,6 +11645,11 @@ $root.jspb = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -11109,7 +11669,7 @@ $root.jspb = (function() {
             Deeply.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -11272,7 +11832,7 @@ $root.jspb = (function() {
                  * @returns {$protobuf.Writer} Writer
                  */
                 Nested.encodeDelimited = function(message, writer) {
-                    return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                    return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                 };
 
                 /**
@@ -11293,7 +11853,17 @@ $root.jspb = (function() {
                         _depth = 0;
                     if (_depth > $Reader.recursionLimit)
                         throw $Error("max depth exceeded");
-                    var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.jspb.test.Deeply.Nested();
+                    var end, message;
+                    if (length === $undefined)
+                        end = reader.len;
+                    else {
+                        end = reader.pos + length;
+                        if (end > reader.len)
+                            throw $RangeError("index out of range");
+                        length = reader.len;
+                        reader.len = end;
+                    }
+                    message = _target || new $root.jspb.test.Deeply.Nested();
                     while (reader.pos < end) {
                         var start = reader.pos;
                         var tag = reader.tag();
@@ -11306,6 +11876,11 @@ $root.jspb = (function() {
                             $util.makeProp(message, "$unknowns", false);
                             (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                         }
+                    }
+                    if (length !== $undefined) {
+                        if (reader.pos !== end)
+                            throw $RangeError("index out of range");
+                        reader.len = length;
                     }
                     if (_end !== $undefined)
                         throw $Error("missing end group");
@@ -11325,7 +11900,7 @@ $root.jspb = (function() {
                 Nested.decodeDelimited = function(reader) {
                     if (!(reader instanceof $Reader))
                         reader = new $Reader(reader);
-                    return this.decode(reader, reader.uint32());
+                    return this.decode(reader, reader.size());
                 };
 
                 /**
@@ -11499,7 +12074,7 @@ $root.jspb = (function() {
                      * @returns {$protobuf.Writer} Writer
                      */
                     Message.encodeDelimited = function(message, writer) {
-                        return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                        return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                     };
 
                     /**
@@ -11520,7 +12095,17 @@ $root.jspb = (function() {
                             _depth = 0;
                         if (_depth > $Reader.recursionLimit)
                             throw $Error("max depth exceeded");
-                        var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.jspb.test.Deeply.Nested.Message();
+                        var end, message;
+                        if (length === $undefined)
+                            end = reader.len;
+                        else {
+                            end = reader.pos + length;
+                            if (end > reader.len)
+                                throw $RangeError("index out of range");
+                            length = reader.len;
+                            reader.len = end;
+                        }
+                        message = _target || new $root.jspb.test.Deeply.Nested.Message();
                         while (reader.pos < end) {
                             var start = reader.pos;
                             var tag = reader.tag();
@@ -11543,6 +12128,11 @@ $root.jspb = (function() {
                                 (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                             }
                         }
+                        if (length !== $undefined) {
+                            if (reader.pos !== end)
+                                throw $RangeError("index out of range");
+                            reader.len = length;
+                        }
                         if (_end !== $undefined)
                             throw $Error("missing end group");
                         return message;
@@ -11561,7 +12151,7 @@ $root.jspb = (function() {
                     Message.decodeDelimited = function(reader) {
                         if (!(reader instanceof $Reader))
                             reader = new $Reader(reader);
-                        return this.decode(reader, reader.uint32());
+                        return this.decode(reader, reader.size());
                     };
 
                     /**
@@ -11787,7 +12377,7 @@ $root.google = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             FileDescriptorSet.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -11808,7 +12398,17 @@ $root.google = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.google.protobuf.FileDescriptorSet();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.google.protobuf.FileDescriptorSet();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -11823,7 +12423,7 @@ $root.google = (function() {
                                 break;
                             if (!(message.file && message.file.length))
                                 message.file = [];
-                            message.file.push($root.google.protobuf.FileDescriptorProto.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message.file.push($root.google.protobuf.FileDescriptorProto.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     }
@@ -11832,6 +12432,11 @@ $root.google = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -11851,7 +12456,7 @@ $root.google = (function() {
             FileDescriptorSet.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -11985,7 +12590,7 @@ $root.google = (function() {
          * @property {number} EDITION_MAX=2147483647 EDITION_MAX value
          */
         protobuf.Edition = (function() {
-            var valuesById = {}, values = $Object.create(valuesById);
+            var valuesById = $Object.create(null), values = $Object.create(valuesById);
             values[valuesById[0] = "EDITION_UNKNOWN"] = 0;
             values[valuesById[900] = "EDITION_LEGACY"] = 900;
             values[valuesById[998] = "EDITION_PROTO2"] = 998;
@@ -12255,7 +12860,7 @@ $root.google = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             FileDescriptorProto.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -12276,7 +12881,17 @@ $root.google = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.google.protobuf.FileDescriptorProto();
+                var end, message, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.google.protobuf.FileDescriptorProto();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -12310,9 +12925,7 @@ $root.google = (function() {
                             if (wireType === 2) {
                                 if (!(message.publicDependency && message.publicDependency.length))
                                     message.publicDependency = [];
-                                var end2 = reader.uint32() + reader.pos;
-                                while (reader.pos < end2)
-                                    message.publicDependency.push(reader.int32());
+                                reader.int32s(message.publicDependency);
                                 continue;
                             }
                             if (wireType !== 0)
@@ -12326,9 +12939,7 @@ $root.google = (function() {
                             if (wireType === 2) {
                                 if (!(message.weakDependency && message.weakDependency.length))
                                     message.weakDependency = [];
-                                var end2 = reader.uint32() + reader.pos;
-                                while (reader.pos < end2)
-                                    message.weakDependency.push(reader.int32());
+                                reader.int32s(message.weakDependency);
                                 continue;
                             }
                             if (wireType !== 0)
@@ -12351,7 +12962,7 @@ $root.google = (function() {
                                 break;
                             if (!(message.messageType && message.messageType.length))
                                 message.messageType = [];
-                            message.messageType.push($root.google.protobuf.DescriptorProto.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message.messageType.push($root.google.protobuf.DescriptorProto.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     case 5: {
@@ -12359,7 +12970,7 @@ $root.google = (function() {
                                 break;
                             if (!(message.enumType && message.enumType.length))
                                 message.enumType = [];
-                            message.enumType.push($root.google.protobuf.EnumDescriptorProto.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message.enumType.push($root.google.protobuf.EnumDescriptorProto.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     case 6: {
@@ -12367,7 +12978,7 @@ $root.google = (function() {
                                 break;
                             if (!(message.service && message.service.length))
                                 message.service = [];
-                            message.service.push($root.google.protobuf.ServiceDescriptorProto.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message.service.push($root.google.protobuf.ServiceDescriptorProto.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     case 7: {
@@ -12375,19 +12986,19 @@ $root.google = (function() {
                                 break;
                             if (!(message.extension && message.extension.length))
                                 message.extension = [];
-                            message.extension.push($root.google.protobuf.FieldDescriptorProto.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message.extension.push($root.google.protobuf.FieldDescriptorProto.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     case 8: {
                             if (wireType !== 2)
                                 break;
-                            message.options = $root.google.protobuf.FileOptions.decode(reader, reader.uint32(), $undefined, _depth + 1, message.options);
+                            message.options = $root.google.protobuf.FileOptions.decode(reader, reader.size(), $undefined, _depth + 1, message.options);
                             continue;
                         }
                     case 9: {
                             if (wireType !== 2)
                                 break;
-                            message.sourceCodeInfo = $root.google.protobuf.SourceCodeInfo.decode(reader, reader.uint32(), $undefined, _depth + 1, message.sourceCodeInfo);
+                            message.sourceCodeInfo = $root.google.protobuf.SourceCodeInfo.decode(reader, reader.size(), $undefined, _depth + 1, message.sourceCodeInfo);
                             continue;
                         }
                     case 12: {
@@ -12399,7 +13010,13 @@ $root.google = (function() {
                     case 14: {
                             if (wireType !== 0)
                                 break;
-                            message.edition = reader.int32();
+                            value = reader.int32();
+                            if ($root.google.protobuf.Edition[value] !== $undefined)
+                                message.edition = value;
+                            else if (!reader.discardUnknown) {
+                                $util.makeProp(message, "$unknowns", false);
+                                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                            }
                             continue;
                         }
                     }
@@ -12408,6 +13025,11 @@ $root.google = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -12427,7 +13049,7 @@ $root.google = (function() {
             FileDescriptorProto.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -12652,12 +13274,6 @@ $root.google = (function() {
                 if (object.syntax != null)
                     message.syntax = $String(object.syntax);
                 switch (object.edition) {
-                default:
-                    if (typeof object.edition === "number") {
-                        message.edition = object.edition;
-                        break;
-                    }
-                    break;
                 case "EDITION_UNKNOWN":
                 case 0:
                     message.edition = 0;
@@ -12706,6 +13322,7 @@ $root.google = (function() {
                 case 2147483647:
                     message.edition = 2147483647;
                     break;
+                default:
                 }
                 return message;
             };
@@ -13049,7 +13666,7 @@ $root.google = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             DescriptorProto.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -13070,7 +13687,17 @@ $root.google = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.google.protobuf.DescriptorProto();
+                var end, message, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.google.protobuf.DescriptorProto();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -13091,7 +13718,7 @@ $root.google = (function() {
                                 break;
                             if (!(message.field && message.field.length))
                                 message.field = [];
-                            message.field.push($root.google.protobuf.FieldDescriptorProto.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message.field.push($root.google.protobuf.FieldDescriptorProto.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     case 6: {
@@ -13099,7 +13726,7 @@ $root.google = (function() {
                                 break;
                             if (!(message.extension && message.extension.length))
                                 message.extension = [];
-                            message.extension.push($root.google.protobuf.FieldDescriptorProto.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message.extension.push($root.google.protobuf.FieldDescriptorProto.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     case 3: {
@@ -13107,7 +13734,7 @@ $root.google = (function() {
                                 break;
                             if (!(message.nestedType && message.nestedType.length))
                                 message.nestedType = [];
-                            message.nestedType.push($root.google.protobuf.DescriptorProto.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message.nestedType.push($root.google.protobuf.DescriptorProto.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     case 4: {
@@ -13115,7 +13742,7 @@ $root.google = (function() {
                                 break;
                             if (!(message.enumType && message.enumType.length))
                                 message.enumType = [];
-                            message.enumType.push($root.google.protobuf.EnumDescriptorProto.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message.enumType.push($root.google.protobuf.EnumDescriptorProto.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     case 5: {
@@ -13123,7 +13750,7 @@ $root.google = (function() {
                                 break;
                             if (!(message.extensionRange && message.extensionRange.length))
                                 message.extensionRange = [];
-                            message.extensionRange.push($root.google.protobuf.DescriptorProto.ExtensionRange.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message.extensionRange.push($root.google.protobuf.DescriptorProto.ExtensionRange.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     case 8: {
@@ -13131,13 +13758,13 @@ $root.google = (function() {
                                 break;
                             if (!(message.oneofDecl && message.oneofDecl.length))
                                 message.oneofDecl = [];
-                            message.oneofDecl.push($root.google.protobuf.OneofDescriptorProto.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message.oneofDecl.push($root.google.protobuf.OneofDescriptorProto.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     case 7: {
                             if (wireType !== 2)
                                 break;
-                            message.options = $root.google.protobuf.MessageOptions.decode(reader, reader.uint32(), $undefined, _depth + 1, message.options);
+                            message.options = $root.google.protobuf.MessageOptions.decode(reader, reader.size(), $undefined, _depth + 1, message.options);
                             continue;
                         }
                     case 9: {
@@ -13145,7 +13772,7 @@ $root.google = (function() {
                                 break;
                             if (!(message.reservedRange && message.reservedRange.length))
                                 message.reservedRange = [];
-                            message.reservedRange.push($root.google.protobuf.DescriptorProto.ReservedRange.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message.reservedRange.push($root.google.protobuf.DescriptorProto.ReservedRange.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     case 10: {
@@ -13159,7 +13786,13 @@ $root.google = (function() {
                     case 11: {
                             if (wireType !== 0)
                                 break;
-                            message.visibility = reader.int32();
+                            value = reader.int32();
+                            if ($root.google.protobuf.SymbolVisibility[value] !== $undefined)
+                                message.visibility = value;
+                            else if (!reader.discardUnknown) {
+                                $util.makeProp(message, "$unknowns", false);
+                                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                            }
                             continue;
                         }
                     }
@@ -13168,6 +13801,11 @@ $root.google = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -13187,7 +13825,7 @@ $root.google = (function() {
             DescriptorProto.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -13398,12 +14036,6 @@ $root.google = (function() {
                         message.reservedName[i] = $String(object.reservedName[i]);
                 }
                 switch (object.visibility) {
-                default:
-                    if (typeof object.visibility === "number") {
-                        message.visibility = object.visibility;
-                        break;
-                    }
-                    break;
                 case "VISIBILITY_UNSET":
                 case 0:
                     message.visibility = 0;
@@ -13416,6 +14048,7 @@ $root.google = (function() {
                 case 2:
                     message.visibility = 2;
                     break;
+                default:
                 }
                 return message;
             };
@@ -13643,7 +14276,7 @@ $root.google = (function() {
                  * @returns {$protobuf.Writer} Writer
                  */
                 ExtensionRange.encodeDelimited = function(message, writer) {
-                    return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                    return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                 };
 
                 /**
@@ -13664,7 +14297,17 @@ $root.google = (function() {
                         _depth = 0;
                     if (_depth > $Reader.recursionLimit)
                         throw $Error("max depth exceeded");
-                    var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.google.protobuf.DescriptorProto.ExtensionRange();
+                    var end, message;
+                    if (length === $undefined)
+                        end = reader.len;
+                    else {
+                        end = reader.pos + length;
+                        if (end > reader.len)
+                            throw $RangeError("index out of range");
+                        length = reader.len;
+                        reader.len = end;
+                    }
+                    message = _target || new $root.google.protobuf.DescriptorProto.ExtensionRange();
                     while (reader.pos < end) {
                         var start = reader.pos;
                         var tag = reader.tag();
@@ -13689,7 +14332,7 @@ $root.google = (function() {
                         case 3: {
                                 if (wireType !== 2)
                                     break;
-                                message.options = $root.google.protobuf.ExtensionRangeOptions.decode(reader, reader.uint32(), $undefined, _depth + 1, message.options);
+                                message.options = $root.google.protobuf.ExtensionRangeOptions.decode(reader, reader.size(), $undefined, _depth + 1, message.options);
                                 continue;
                             }
                         }
@@ -13698,6 +14341,11 @@ $root.google = (function() {
                             $util.makeProp(message, "$unknowns", false);
                             (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                         }
+                    }
+                    if (length !== $undefined) {
+                        if (reader.pos !== end)
+                            throw $RangeError("index out of range");
+                        reader.len = length;
                     }
                     if (_end !== $undefined)
                         throw $Error("missing end group");
@@ -13717,7 +14365,7 @@ $root.google = (function() {
                 ExtensionRange.decodeDelimited = function(reader) {
                     if (!(reader instanceof $Reader))
                         reader = new $Reader(reader);
-                    return this.decode(reader, reader.uint32());
+                    return this.decode(reader, reader.size());
                 };
 
                 /**
@@ -13944,7 +14592,7 @@ $root.google = (function() {
                  * @returns {$protobuf.Writer} Writer
                  */
                 ReservedRange.encodeDelimited = function(message, writer) {
-                    return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                    return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                 };
 
                 /**
@@ -13965,7 +14613,17 @@ $root.google = (function() {
                         _depth = 0;
                     if (_depth > $Reader.recursionLimit)
                         throw $Error("max depth exceeded");
-                    var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.google.protobuf.DescriptorProto.ReservedRange();
+                    var end, message;
+                    if (length === $undefined)
+                        end = reader.len;
+                    else {
+                        end = reader.pos + length;
+                        if (end > reader.len)
+                            throw $RangeError("index out of range");
+                        length = reader.len;
+                        reader.len = end;
+                    }
+                    message = _target || new $root.google.protobuf.DescriptorProto.ReservedRange();
                     while (reader.pos < end) {
                         var start = reader.pos;
                         var tag = reader.tag();
@@ -13994,6 +14652,11 @@ $root.google = (function() {
                             (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                         }
                     }
+                    if (length !== $undefined) {
+                        if (reader.pos !== end)
+                            throw $RangeError("index out of range");
+                        reader.len = length;
+                    }
                     if (_end !== $undefined)
                         throw $Error("missing end group");
                     return message;
@@ -14012,7 +14675,7 @@ $root.google = (function() {
                 ReservedRange.decodeDelimited = function(reader) {
                     if (!(reader instanceof $Reader))
                         reader = new $Reader(reader);
-                    return this.decode(reader, reader.uint32());
+                    return this.decode(reader, reader.size());
                 };
 
                 /**
@@ -14255,7 +14918,7 @@ $root.google = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             ExtensionRangeOptions.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -14276,7 +14939,17 @@ $root.google = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.google.protobuf.ExtensionRangeOptions();
+                var end, message, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.google.protobuf.ExtensionRangeOptions();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -14291,7 +14964,7 @@ $root.google = (function() {
                                 break;
                             if (!(message.uninterpretedOption && message.uninterpretedOption.length))
                                 message.uninterpretedOption = [];
-                            message.uninterpretedOption.push($root.google.protobuf.UninterpretedOption.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message.uninterpretedOption.push($root.google.protobuf.UninterpretedOption.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     case 2: {
@@ -14299,19 +14972,25 @@ $root.google = (function() {
                                 break;
                             if (!(message.declaration && message.declaration.length))
                                 message.declaration = [];
-                            message.declaration.push($root.google.protobuf.ExtensionRangeOptions.Declaration.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message.declaration.push($root.google.protobuf.ExtensionRangeOptions.Declaration.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     case 50: {
                             if (wireType !== 2)
                                 break;
-                            message.features = $root.google.protobuf.FeatureSet.decode(reader, reader.uint32(), $undefined, _depth + 1, message.features);
+                            message.features = $root.google.protobuf.FeatureSet.decode(reader, reader.size(), $undefined, _depth + 1, message.features);
                             continue;
                         }
                     case 3: {
                             if (wireType !== 0)
                                 break;
-                            message.verification = reader.int32();
+                            value = reader.int32();
+                            if ($root.google.protobuf.ExtensionRangeOptions.VerificationState[value] !== $undefined)
+                                message.verification = value;
+                            else if (!reader.discardUnknown) {
+                                $util.makeProp(message, "$unknowns", false);
+                                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                            }
                             continue;
                         }
                     }
@@ -14320,6 +14999,11 @@ $root.google = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -14339,7 +15023,7 @@ $root.google = (function() {
             ExtensionRangeOptions.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -14439,16 +15123,11 @@ $root.google = (function() {
                 case 0:
                     message.verification = 0;
                     break;
-                default:
-                    if (typeof object.verification === "number") {
-                        message.verification = object.verification;
-                        break;
-                    }
-                    break;
                 case "UNVERIFIED":
                 case 1:
                     message.verification = 1;
                     break;
+                default:
                 }
                 return message;
             };
@@ -14659,7 +15338,7 @@ $root.google = (function() {
                  * @returns {$protobuf.Writer} Writer
                  */
                 Declaration.encodeDelimited = function(message, writer) {
-                    return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                    return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                 };
 
                 /**
@@ -14680,7 +15359,17 @@ $root.google = (function() {
                         _depth = 0;
                     if (_depth > $Reader.recursionLimit)
                         throw $Error("max depth exceeded");
-                    var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.google.protobuf.ExtensionRangeOptions.Declaration();
+                    var end, message;
+                    if (length === $undefined)
+                        end = reader.len;
+                    else {
+                        end = reader.pos + length;
+                        if (end > reader.len)
+                            throw $RangeError("index out of range");
+                        length = reader.len;
+                        reader.len = end;
+                    }
+                    message = _target || new $root.google.protobuf.ExtensionRangeOptions.Declaration();
                     while (reader.pos < end) {
                         var start = reader.pos;
                         var tag = reader.tag();
@@ -14727,6 +15416,11 @@ $root.google = (function() {
                             (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                         }
                     }
+                    if (length !== $undefined) {
+                        if (reader.pos !== end)
+                            throw $RangeError("index out of range");
+                        reader.len = length;
+                    }
                     if (_end !== $undefined)
                         throw $Error("missing end group");
                     return message;
@@ -14745,7 +15439,7 @@ $root.google = (function() {
                 Declaration.decodeDelimited = function(reader) {
                     if (!(reader instanceof $Reader))
                         reader = new $Reader(reader);
-                    return this.decode(reader, reader.uint32());
+                    return this.decode(reader, reader.size());
                 };
 
                 /**
@@ -14885,7 +15579,7 @@ $root.google = (function() {
              * @property {number} UNVERIFIED=1 UNVERIFIED value
              */
             ExtensionRangeOptions.VerificationState = (function() {
-                var valuesById = {}, values = $Object.create(valuesById);
+                var valuesById = $Object.create(null), values = $Object.create(valuesById);
                 values[valuesById[0] = "DECLARATION"] = 0;
                 values[valuesById[1] = "UNVERIFIED"] = 1;
                 return values;
@@ -15099,7 +15793,7 @@ $root.google = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             FieldDescriptorProto.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -15120,7 +15814,17 @@ $root.google = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.google.protobuf.FieldDescriptorProto();
+                var end, message, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.google.protobuf.FieldDescriptorProto();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -15145,13 +15849,25 @@ $root.google = (function() {
                     case 4: {
                             if (wireType !== 0)
                                 break;
-                            message.label = reader.int32();
+                            value = reader.int32();
+                            if ($root.google.protobuf.FieldDescriptorProto.Label[value] !== $undefined)
+                                message.label = value;
+                            else if (!reader.discardUnknown) {
+                                $util.makeProp(message, "$unknowns", false);
+                                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                            }
                             continue;
                         }
                     case 5: {
                             if (wireType !== 0)
                                 break;
-                            message.type = reader.int32();
+                            value = reader.int32();
+                            if ($root.google.protobuf.FieldDescriptorProto.Type[value] !== $undefined)
+                                message.type = value;
+                            else if (!reader.discardUnknown) {
+                                $util.makeProp(message, "$unknowns", false);
+                                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                            }
                             continue;
                         }
                     case 6: {
@@ -15187,7 +15903,7 @@ $root.google = (function() {
                     case 8: {
                             if (wireType !== 2)
                                 break;
-                            message.options = $root.google.protobuf.FieldOptions.decode(reader, reader.uint32(), $undefined, _depth + 1, message.options);
+                            message.options = $root.google.protobuf.FieldOptions.decode(reader, reader.size(), $undefined, _depth + 1, message.options);
                             continue;
                         }
                     case 17: {
@@ -15202,6 +15918,11 @@ $root.google = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -15221,7 +15942,7 @@ $root.google = (function() {
             FieldDescriptorProto.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -15327,12 +16048,6 @@ $root.google = (function() {
                 if (object.number != null)
                     message.number = object.number | 0;
                 switch (object.label) {
-                default:
-                    if (typeof object.label === "number") {
-                        message.label = object.label;
-                        break;
-                    }
-                    break;
                 case "LABEL_OPTIONAL":
                 case 1:
                     message.label = 1;
@@ -15345,14 +16060,9 @@ $root.google = (function() {
                 case 2:
                     message.label = 2;
                     break;
+                default:
                 }
                 switch (object.type) {
-                default:
-                    if (typeof object.type === "number") {
-                        message.type = object.type;
-                        break;
-                    }
-                    break;
                 case "TYPE_DOUBLE":
                 case 1:
                     message.type = 1;
@@ -15425,6 +16135,7 @@ $root.google = (function() {
                 case 18:
                     message.type = 18;
                     break;
+                default:
                 }
                 if (object.typeName != null)
                     message.typeName = $String(object.typeName);
@@ -15550,7 +16261,7 @@ $root.google = (function() {
              * @property {number} TYPE_SINT64=18 TYPE_SINT64 value
              */
             FieldDescriptorProto.Type = (function() {
-                var valuesById = {}, values = $Object.create(valuesById);
+                var valuesById = $Object.create(null), values = $Object.create(valuesById);
                 values[valuesById[1] = "TYPE_DOUBLE"] = 1;
                 values[valuesById[2] = "TYPE_FLOAT"] = 2;
                 values[valuesById[3] = "TYPE_INT64"] = 3;
@@ -15581,7 +16292,7 @@ $root.google = (function() {
              * @property {number} LABEL_REQUIRED=2 LABEL_REQUIRED value
              */
             FieldDescriptorProto.Label = (function() {
-                var valuesById = {}, values = $Object.create(valuesById);
+                var valuesById = $Object.create(null), values = $Object.create(valuesById);
                 values[valuesById[1] = "LABEL_OPTIONAL"] = 1;
                 values[valuesById[3] = "LABEL_REPEATED"] = 3;
                 values[valuesById[2] = "LABEL_REQUIRED"] = 2;
@@ -15697,7 +16408,7 @@ $root.google = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             OneofDescriptorProto.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -15718,7 +16429,17 @@ $root.google = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.google.protobuf.OneofDescriptorProto();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.google.protobuf.OneofDescriptorProto();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -15737,7 +16458,7 @@ $root.google = (function() {
                     case 2: {
                             if (wireType !== 2)
                                 break;
-                            message.options = $root.google.protobuf.OneofOptions.decode(reader, reader.uint32(), $undefined, _depth + 1, message.options);
+                            message.options = $root.google.protobuf.OneofOptions.decode(reader, reader.size(), $undefined, _depth + 1, message.options);
                             continue;
                         }
                     }
@@ -15746,6 +16467,11 @@ $root.google = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -15765,7 +16491,7 @@ $root.google = (function() {
             OneofDescriptorProto.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -16034,7 +16760,7 @@ $root.google = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             EnumDescriptorProto.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -16055,7 +16781,17 @@ $root.google = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.google.protobuf.EnumDescriptorProto();
+                var end, message, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.google.protobuf.EnumDescriptorProto();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -16076,13 +16812,13 @@ $root.google = (function() {
                                 break;
                             if (!(message.value && message.value.length))
                                 message.value = [];
-                            message.value.push($root.google.protobuf.EnumValueDescriptorProto.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message.value.push($root.google.protobuf.EnumValueDescriptorProto.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     case 3: {
                             if (wireType !== 2)
                                 break;
-                            message.options = $root.google.protobuf.EnumOptions.decode(reader, reader.uint32(), $undefined, _depth + 1, message.options);
+                            message.options = $root.google.protobuf.EnumOptions.decode(reader, reader.size(), $undefined, _depth + 1, message.options);
                             continue;
                         }
                     case 4: {
@@ -16090,7 +16826,7 @@ $root.google = (function() {
                                 break;
                             if (!(message.reservedRange && message.reservedRange.length))
                                 message.reservedRange = [];
-                            message.reservedRange.push($root.google.protobuf.EnumDescriptorProto.EnumReservedRange.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message.reservedRange.push($root.google.protobuf.EnumDescriptorProto.EnumReservedRange.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     case 5: {
@@ -16104,7 +16840,13 @@ $root.google = (function() {
                     case 6: {
                             if (wireType !== 0)
                                 break;
-                            message.visibility = reader.int32();
+                            value = reader.int32();
+                            if ($root.google.protobuf.SymbolVisibility[value] !== $undefined)
+                                message.visibility = value;
+                            else if (!reader.discardUnknown) {
+                                $util.makeProp(message, "$unknowns", false);
+                                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                            }
                             continue;
                         }
                     }
@@ -16113,6 +16855,11 @@ $root.google = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -16132,7 +16879,7 @@ $root.google = (function() {
             EnumDescriptorProto.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -16248,12 +16995,6 @@ $root.google = (function() {
                         message.reservedName[i] = $String(object.reservedName[i]);
                 }
                 switch (object.visibility) {
-                default:
-                    if (typeof object.visibility === "number") {
-                        message.visibility = object.visibility;
-                        break;
-                    }
-                    break;
                 case "VISIBILITY_UNSET":
                 case 0:
                     message.visibility = 0;
@@ -16266,6 +17007,7 @@ $root.google = (function() {
                 case 2:
                     message.visibility = 2;
                     break;
+                default:
                 }
                 return message;
             };
@@ -16452,7 +17194,7 @@ $root.google = (function() {
                  * @returns {$protobuf.Writer} Writer
                  */
                 EnumReservedRange.encodeDelimited = function(message, writer) {
-                    return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                    return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                 };
 
                 /**
@@ -16473,7 +17215,17 @@ $root.google = (function() {
                         _depth = 0;
                     if (_depth > $Reader.recursionLimit)
                         throw $Error("max depth exceeded");
-                    var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.google.protobuf.EnumDescriptorProto.EnumReservedRange();
+                    var end, message;
+                    if (length === $undefined)
+                        end = reader.len;
+                    else {
+                        end = reader.pos + length;
+                        if (end > reader.len)
+                            throw $RangeError("index out of range");
+                        length = reader.len;
+                        reader.len = end;
+                    }
+                    message = _target || new $root.google.protobuf.EnumDescriptorProto.EnumReservedRange();
                     while (reader.pos < end) {
                         var start = reader.pos;
                         var tag = reader.tag();
@@ -16502,6 +17254,11 @@ $root.google = (function() {
                             (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                         }
                     }
+                    if (length !== $undefined) {
+                        if (reader.pos !== end)
+                            throw $RangeError("index out of range");
+                        reader.len = length;
+                    }
                     if (_end !== $undefined)
                         throw $Error("missing end group");
                     return message;
@@ -16520,7 +17277,7 @@ $root.google = (function() {
                 EnumReservedRange.decodeDelimited = function(reader) {
                     if (!(reader instanceof $Reader))
                         reader = new $Reader(reader);
-                    return this.decode(reader, reader.uint32());
+                    return this.decode(reader, reader.size());
                 };
 
                 /**
@@ -16748,7 +17505,7 @@ $root.google = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             EnumValueDescriptorProto.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -16769,7 +17526,17 @@ $root.google = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.google.protobuf.EnumValueDescriptorProto();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.google.protobuf.EnumValueDescriptorProto();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -16794,7 +17561,7 @@ $root.google = (function() {
                     case 3: {
                             if (wireType !== 2)
                                 break;
-                            message.options = $root.google.protobuf.EnumValueOptions.decode(reader, reader.uint32(), $undefined, _depth + 1, message.options);
+                            message.options = $root.google.protobuf.EnumValueOptions.decode(reader, reader.size(), $undefined, _depth + 1, message.options);
                             continue;
                         }
                     }
@@ -16803,6 +17570,11 @@ $root.google = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -16822,7 +17594,7 @@ $root.google = (function() {
             EnumValueDescriptorProto.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -17062,7 +17834,7 @@ $root.google = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             ServiceDescriptorProto.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -17083,7 +17855,17 @@ $root.google = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.google.protobuf.ServiceDescriptorProto();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.google.protobuf.ServiceDescriptorProto();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -17104,13 +17886,13 @@ $root.google = (function() {
                                 break;
                             if (!(message.method && message.method.length))
                                 message.method = [];
-                            message.method.push($root.google.protobuf.MethodDescriptorProto.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message.method.push($root.google.protobuf.MethodDescriptorProto.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     case 3: {
                             if (wireType !== 2)
                                 break;
-                            message.options = $root.google.protobuf.ServiceOptions.decode(reader, reader.uint32(), $undefined, _depth + 1, message.options);
+                            message.options = $root.google.protobuf.ServiceOptions.decode(reader, reader.size(), $undefined, _depth + 1, message.options);
                             continue;
                         }
                     }
@@ -17119,6 +17901,11 @@ $root.google = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -17138,7 +17925,7 @@ $root.google = (function() {
             ServiceDescriptorProto.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -17427,7 +18214,7 @@ $root.google = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             MethodDescriptorProto.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -17448,7 +18235,17 @@ $root.google = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.google.protobuf.MethodDescriptorProto();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.google.protobuf.MethodDescriptorProto();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -17479,7 +18276,7 @@ $root.google = (function() {
                     case 4: {
                             if (wireType !== 2)
                                 break;
-                            message.options = $root.google.protobuf.MethodOptions.decode(reader, reader.uint32(), $undefined, _depth + 1, message.options);
+                            message.options = $root.google.protobuf.MethodOptions.decode(reader, reader.size(), $undefined, _depth + 1, message.options);
                             continue;
                         }
                     case 5: {
@@ -17501,6 +18298,11 @@ $root.google = (function() {
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
                 }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
+                }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
                 return message;
@@ -17519,7 +18321,7 @@ $root.google = (function() {
             MethodDescriptorProto.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -17981,7 +18783,7 @@ $root.google = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             FileOptions.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -18002,7 +18804,17 @@ $root.google = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.google.protobuf.FileOptions();
+                var end, message, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.google.protobuf.FileOptions();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -18045,7 +18857,13 @@ $root.google = (function() {
                     case 9: {
                             if (wireType !== 0)
                                 break;
-                            message.optimizeFor = reader.int32();
+                            value = reader.int32();
+                            if ($root.google.protobuf.FileOptions.OptimizeMode[value] !== $undefined)
+                                message.optimizeFor = value;
+                            else if (!reader.discardUnknown) {
+                                $util.makeProp(message, "$unknowns", false);
+                                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                            }
                             continue;
                         }
                     case 11: {
@@ -18129,7 +18947,7 @@ $root.google = (function() {
                     case 50: {
                             if (wireType !== 2)
                                 break;
-                            message.features = $root.google.protobuf.FeatureSet.decode(reader, reader.uint32(), $undefined, _depth + 1, message.features);
+                            message.features = $root.google.protobuf.FeatureSet.decode(reader, reader.size(), $undefined, _depth + 1, message.features);
                             continue;
                         }
                     case 999: {
@@ -18137,7 +18955,7 @@ $root.google = (function() {
                                 break;
                             if (!(message.uninterpretedOption && message.uninterpretedOption.length))
                                 message.uninterpretedOption = [];
-                            message.uninterpretedOption.push($root.google.protobuf.UninterpretedOption.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message.uninterpretedOption.push($root.google.protobuf.UninterpretedOption.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     }
@@ -18146,6 +18964,11 @@ $root.google = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -18165,7 +18988,7 @@ $root.google = (function() {
             FileOptions.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -18292,12 +19115,6 @@ $root.google = (function() {
                 if (object.javaStringCheckUtf8 != null)
                     message.javaStringCheckUtf8 = $Boolean(object.javaStringCheckUtf8);
                 switch (object.optimizeFor) {
-                default:
-                    if (typeof object.optimizeFor === "number") {
-                        message.optimizeFor = object.optimizeFor;
-                        break;
-                    }
-                    break;
                 case "SPEED":
                 case 1:
                     message.optimizeFor = 1;
@@ -18310,6 +19127,7 @@ $root.google = (function() {
                 case 3:
                     message.optimizeFor = 3;
                     break;
+                default:
                 }
                 if (object.goPackage != null)
                     message.goPackage = $String(object.goPackage);
@@ -18478,7 +19296,7 @@ $root.google = (function() {
              * @property {number} LITE_RUNTIME=3 LITE_RUNTIME value
              */
             FileOptions.OptimizeMode = (function() {
-                var valuesById = {}, values = $Object.create(valuesById);
+                var valuesById = $Object.create(null), values = $Object.create(valuesById);
                 values[valuesById[1] = "SPEED"] = 1;
                 values[valuesById[2] = "CODE_SIZE"] = 2;
                 values[valuesById[3] = "LITE_RUNTIME"] = 3;
@@ -18651,7 +19469,7 @@ $root.google = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             MessageOptions.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -18672,7 +19490,17 @@ $root.google = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.google.protobuf.MessageOptions();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.google.protobuf.MessageOptions();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -18715,7 +19543,7 @@ $root.google = (function() {
                     case 12: {
                             if (wireType !== 2)
                                 break;
-                            message.features = $root.google.protobuf.FeatureSet.decode(reader, reader.uint32(), $undefined, _depth + 1, message.features);
+                            message.features = $root.google.protobuf.FeatureSet.decode(reader, reader.size(), $undefined, _depth + 1, message.features);
                             continue;
                         }
                     case 999: {
@@ -18723,7 +19551,7 @@ $root.google = (function() {
                                 break;
                             if (!(message.uninterpretedOption && message.uninterpretedOption.length))
                                 message.uninterpretedOption = [];
-                            message.uninterpretedOption.push($root.google.protobuf.UninterpretedOption.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message.uninterpretedOption.push($root.google.protobuf.UninterpretedOption.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     }
@@ -18732,6 +19560,11 @@ $root.google = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -18751,7 +19584,7 @@ $root.google = (function() {
             MessageOptions.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -19166,7 +19999,7 @@ $root.google = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             FieldOptions.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -19187,7 +20020,17 @@ $root.google = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.google.protobuf.FieldOptions();
+                var end, message, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.google.protobuf.FieldOptions();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -19200,7 +20043,13 @@ $root.google = (function() {
                     case 1: {
                             if (wireType !== 0)
                                 break;
-                            message.ctype = reader.int32();
+                            value = reader.int32();
+                            if ($root.google.protobuf.FieldOptions.CType[value] !== $undefined)
+                                message.ctype = value;
+                            else if (!reader.discardUnknown) {
+                                $util.makeProp(message, "$unknowns", false);
+                                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                            }
                             continue;
                         }
                     case 2: {
@@ -19212,7 +20061,13 @@ $root.google = (function() {
                     case 6: {
                             if (wireType !== 0)
                                 break;
-                            message.jstype = reader.int32();
+                            value = reader.int32();
+                            if ($root.google.protobuf.FieldOptions.JSType[value] !== $undefined)
+                                message.jstype = value;
+                            else if (!reader.discardUnknown) {
+                                $util.makeProp(message, "$unknowns", false);
+                                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                            }
                             continue;
                         }
                     case 5: {
@@ -19248,23 +20103,49 @@ $root.google = (function() {
                     case 17: {
                             if (wireType !== 0)
                                 break;
-                            message.retention = reader.int32();
+                            value = reader.int32();
+                            if ($root.google.protobuf.FieldOptions.OptionRetention[value] !== $undefined)
+                                message.retention = value;
+                            else if (!reader.discardUnknown) {
+                                $util.makeProp(message, "$unknowns", false);
+                                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                            }
                             continue;
                         }
                     case 19: {
                             if (wireType === 2) {
-                                if (!(message.targets && message.targets.length))
-                                    message.targets = [];
-                                var end2 = reader.uint32() + reader.pos;
-                                while (reader.pos < end2)
-                                    message.targets.push(reader.int32());
+                                var end2 = reader.size() + reader.pos;
+                                if (end2 > reader.len)
+                                    throw $RangeError("index out of range");
+                                reader.len = end2;
+                                while (reader.pos < end2) {
+                                    start = reader.pos;
+                                    value = reader.int32();
+                                    if ($root.google.protobuf.FieldOptions.OptionTargetType[value] !== $undefined) {
+                                        if (!(message.targets && message.targets.length))
+                                            message.targets = [];
+                                        message.targets.push(value);
+                                    } else if (!reader.discardUnknown) {
+                                        $util.makeProp(message, "$unknowns", false);
+                                        (message.$unknowns || (message.$unknowns = [])).push($util.rawField(19, 0, reader.raw(start, reader.pos)));
+                                    }
+                                }
+                                if (reader.pos !== end2)
+                                    throw $RangeError("index out of range");
+                                reader.len = end;
                                 continue;
                             }
                             if (wireType !== 0)
                                 break;
-                            if (!(message.targets && message.targets.length))
-                                message.targets = [];
-                            message.targets.push(reader.int32());
+                            value = reader.int32();
+                            if ($root.google.protobuf.FieldOptions.OptionTargetType[value] !== $undefined) {
+                                if (!(message.targets && message.targets.length))
+                                    message.targets = [];
+                                message.targets.push(value);
+                            } else if (!reader.discardUnknown) {
+                                $util.makeProp(message, "$unknowns", false);
+                                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                            }
                             continue;
                         }
                     case 20: {
@@ -19272,19 +20153,19 @@ $root.google = (function() {
                                 break;
                             if (!(message.editionDefaults && message.editionDefaults.length))
                                 message.editionDefaults = [];
-                            message.editionDefaults.push($root.google.protobuf.FieldOptions.EditionDefault.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message.editionDefaults.push($root.google.protobuf.FieldOptions.EditionDefault.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     case 21: {
                             if (wireType !== 2)
                                 break;
-                            message.features = $root.google.protobuf.FeatureSet.decode(reader, reader.uint32(), $undefined, _depth + 1, message.features);
+                            message.features = $root.google.protobuf.FeatureSet.decode(reader, reader.size(), $undefined, _depth + 1, message.features);
                             continue;
                         }
                     case 22: {
                             if (wireType !== 2)
                                 break;
-                            message.featureSupport = $root.google.protobuf.FieldOptions.FeatureSupport.decode(reader, reader.uint32(), $undefined, _depth + 1, message.featureSupport);
+                            message.featureSupport = $root.google.protobuf.FieldOptions.FeatureSupport.decode(reader, reader.size(), $undefined, _depth + 1, message.featureSupport);
                             continue;
                         }
                     case 999: {
@@ -19292,7 +20173,7 @@ $root.google = (function() {
                                 break;
                             if (!(message.uninterpretedOption && message.uninterpretedOption.length))
                                 message.uninterpretedOption = [];
-                            message.uninterpretedOption.push($root.google.protobuf.UninterpretedOption.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message.uninterpretedOption.push($root.google.protobuf.UninterpretedOption.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     }
@@ -19301,6 +20182,11 @@ $root.google = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -19320,7 +20206,7 @@ $root.google = (function() {
             FieldOptions.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -19453,12 +20339,6 @@ $root.google = (function() {
                     throw $Error("max depth exceeded");
                 var message = new $root.google.protobuf.FieldOptions();
                 switch (object.ctype) {
-                default:
-                    if (typeof object.ctype === "number") {
-                        message.ctype = object.ctype;
-                        break;
-                    }
-                    break;
                 case "STRING":
                 case 0:
                     message.ctype = 0;
@@ -19471,16 +20351,11 @@ $root.google = (function() {
                 case 2:
                     message.ctype = 2;
                     break;
+                default:
                 }
                 if (object.packed != null)
                     message.packed = $Boolean(object.packed);
                 switch (object.jstype) {
-                default:
-                    if (typeof object.jstype === "number") {
-                        message.jstype = object.jstype;
-                        break;
-                    }
-                    break;
                 case "JS_NORMAL":
                 case 0:
                     message.jstype = 0;
@@ -19493,6 +20368,7 @@ $root.google = (function() {
                 case 2:
                     message.jstype = 2;
                     break;
+                default:
                 }
                 if (object.lazy != null)
                     message.lazy = $Boolean(object.lazy);
@@ -19505,12 +20381,6 @@ $root.google = (function() {
                 if (object.debugRedact != null)
                     message.debugRedact = $Boolean(object.debugRedact);
                 switch (object.retention) {
-                default:
-                    if (typeof object.retention === "number") {
-                        message.retention = object.retention;
-                        break;
-                    }
-                    break;
                 case "RETENTION_UNKNOWN":
                 case 0:
                     message.retention = 0;
@@ -19523,58 +20393,55 @@ $root.google = (function() {
                 case 2:
                     message.retention = 2;
                     break;
+                default:
                 }
                 if (object.targets) {
                     if (!$Array.isArray(object.targets))
                         throw $TypeError(".google.protobuf.FieldOptions.targets: array expected");
-                    message.targets = $Array(object.targets.length);
+                    message.targets = [];
                     for (var i = 0; i < object.targets.length; ++i)
                         switch (object.targets[i]) {
-                        default:
-                            if (typeof object.targets[i] === "number") {
-                                message.targets[i] = object.targets[i];
-                                break;
-                            }
                         case "TARGET_TYPE_UNKNOWN":
                         case 0:
-                            message.targets[i] = 0;
+                            message.targets[message.targets.length] = 0;
                             break;
                         case "TARGET_TYPE_FILE":
                         case 1:
-                            message.targets[i] = 1;
+                            message.targets[message.targets.length] = 1;
                             break;
                         case "TARGET_TYPE_EXTENSION_RANGE":
                         case 2:
-                            message.targets[i] = 2;
+                            message.targets[message.targets.length] = 2;
                             break;
                         case "TARGET_TYPE_MESSAGE":
                         case 3:
-                            message.targets[i] = 3;
+                            message.targets[message.targets.length] = 3;
                             break;
                         case "TARGET_TYPE_FIELD":
                         case 4:
-                            message.targets[i] = 4;
+                            message.targets[message.targets.length] = 4;
                             break;
                         case "TARGET_TYPE_ONEOF":
                         case 5:
-                            message.targets[i] = 5;
+                            message.targets[message.targets.length] = 5;
                             break;
                         case "TARGET_TYPE_ENUM":
                         case 6:
-                            message.targets[i] = 6;
+                            message.targets[message.targets.length] = 6;
                             break;
                         case "TARGET_TYPE_ENUM_ENTRY":
                         case 7:
-                            message.targets[i] = 7;
+                            message.targets[message.targets.length] = 7;
                             break;
                         case "TARGET_TYPE_SERVICE":
                         case 8:
-                            message.targets[i] = 8;
+                            message.targets[message.targets.length] = 8;
                             break;
                         case "TARGET_TYPE_METHOD":
                         case 9:
-                            message.targets[i] = 9;
+                            message.targets[message.targets.length] = 9;
                             break;
+                        default:
                         }
                 }
                 if (object.editionDefaults) {
@@ -19719,7 +20586,7 @@ $root.google = (function() {
              * @property {number} STRING_PIECE=2 STRING_PIECE value
              */
             FieldOptions.CType = (function() {
-                var valuesById = {}, values = $Object.create(valuesById);
+                var valuesById = $Object.create(null), values = $Object.create(valuesById);
                 values[valuesById[0] = "STRING"] = 0;
                 values[valuesById[1] = "CORD"] = 1;
                 values[valuesById[2] = "STRING_PIECE"] = 2;
@@ -19735,7 +20602,7 @@ $root.google = (function() {
              * @property {number} JS_NUMBER=2 JS_NUMBER value
              */
             FieldOptions.JSType = (function() {
-                var valuesById = {}, values = $Object.create(valuesById);
+                var valuesById = $Object.create(null), values = $Object.create(valuesById);
                 values[valuesById[0] = "JS_NORMAL"] = 0;
                 values[valuesById[1] = "JS_STRING"] = 1;
                 values[valuesById[2] = "JS_NUMBER"] = 2;
@@ -19751,7 +20618,7 @@ $root.google = (function() {
              * @property {number} RETENTION_SOURCE=2 RETENTION_SOURCE value
              */
             FieldOptions.OptionRetention = (function() {
-                var valuesById = {}, values = $Object.create(valuesById);
+                var valuesById = $Object.create(null), values = $Object.create(valuesById);
                 values[valuesById[0] = "RETENTION_UNKNOWN"] = 0;
                 values[valuesById[1] = "RETENTION_RUNTIME"] = 1;
                 values[valuesById[2] = "RETENTION_SOURCE"] = 2;
@@ -19774,7 +20641,7 @@ $root.google = (function() {
              * @property {number} TARGET_TYPE_METHOD=9 TARGET_TYPE_METHOD value
              */
             FieldOptions.OptionTargetType = (function() {
-                var valuesById = {}, values = $Object.create(valuesById);
+                var valuesById = $Object.create(null), values = $Object.create(valuesById);
                 values[valuesById[0] = "TARGET_TYPE_UNKNOWN"] = 0;
                 values[valuesById[1] = "TARGET_TYPE_FILE"] = 1;
                 values[valuesById[2] = "TARGET_TYPE_EXTENSION_RANGE"] = 2;
@@ -19894,7 +20761,7 @@ $root.google = (function() {
                  * @returns {$protobuf.Writer} Writer
                  */
                 EditionDefault.encodeDelimited = function(message, writer) {
-                    return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                    return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                 };
 
                 /**
@@ -19915,7 +20782,17 @@ $root.google = (function() {
                         _depth = 0;
                     if (_depth > $Reader.recursionLimit)
                         throw $Error("max depth exceeded");
-                    var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.google.protobuf.FieldOptions.EditionDefault();
+                    var end, message, value;
+                    if (length === $undefined)
+                        end = reader.len;
+                    else {
+                        end = reader.pos + length;
+                        if (end > reader.len)
+                            throw $RangeError("index out of range");
+                        length = reader.len;
+                        reader.len = end;
+                    }
+                    message = _target || new $root.google.protobuf.FieldOptions.EditionDefault();
                     while (reader.pos < end) {
                         var start = reader.pos;
                         var tag = reader.tag();
@@ -19928,7 +20805,13 @@ $root.google = (function() {
                         case 3: {
                                 if (wireType !== 0)
                                     break;
-                                message.edition = reader.int32();
+                                value = reader.int32();
+                                if ($root.google.protobuf.Edition[value] !== $undefined)
+                                    message.edition = value;
+                                else if (!reader.discardUnknown) {
+                                    $util.makeProp(message, "$unknowns", false);
+                                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                                }
                                 continue;
                             }
                         case 2: {
@@ -19943,6 +20826,11 @@ $root.google = (function() {
                             $util.makeProp(message, "$unknowns", false);
                             (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                         }
+                    }
+                    if (length !== $undefined) {
+                        if (reader.pos !== end)
+                            throw $RangeError("index out of range");
+                        reader.len = length;
                     }
                     if (_end !== $undefined)
                         throw $Error("missing end group");
@@ -19962,7 +20850,7 @@ $root.google = (function() {
                 EditionDefault.decodeDelimited = function(reader) {
                     if (!(reader instanceof $Reader))
                         reader = new $Reader(reader);
-                    return this.decode(reader, reader.uint32());
+                    return this.decode(reader, reader.size());
                 };
 
                 /**
@@ -20023,12 +20911,6 @@ $root.google = (function() {
                         throw $Error("max depth exceeded");
                     var message = new $root.google.protobuf.FieldOptions.EditionDefault();
                     switch (object.edition) {
-                    default:
-                        if (typeof object.edition === "number") {
-                            message.edition = object.edition;
-                            break;
-                        }
-                        break;
                     case "EDITION_UNKNOWN":
                     case 0:
                         message.edition = 0;
@@ -20077,6 +20959,7 @@ $root.google = (function() {
                     case 2147483647:
                         message.edition = 2147483647;
                         break;
+                    default:
                     }
                     if (object.value != null)
                         message.value = $String(object.value);
@@ -20267,7 +21150,7 @@ $root.google = (function() {
                  * @returns {$protobuf.Writer} Writer
                  */
                 FeatureSupport.encodeDelimited = function(message, writer) {
-                    return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                    return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                 };
 
                 /**
@@ -20288,7 +21171,17 @@ $root.google = (function() {
                         _depth = 0;
                     if (_depth > $Reader.recursionLimit)
                         throw $Error("max depth exceeded");
-                    var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.google.protobuf.FieldOptions.FeatureSupport();
+                    var end, message, value;
+                    if (length === $undefined)
+                        end = reader.len;
+                    else {
+                        end = reader.pos + length;
+                        if (end > reader.len)
+                            throw $RangeError("index out of range");
+                        length = reader.len;
+                        reader.len = end;
+                    }
+                    message = _target || new $root.google.protobuf.FieldOptions.FeatureSupport();
                     while (reader.pos < end) {
                         var start = reader.pos;
                         var tag = reader.tag();
@@ -20301,13 +21194,25 @@ $root.google = (function() {
                         case 1: {
                                 if (wireType !== 0)
                                     break;
-                                message.editionIntroduced = reader.int32();
+                                value = reader.int32();
+                                if ($root.google.protobuf.Edition[value] !== $undefined)
+                                    message.editionIntroduced = value;
+                                else if (!reader.discardUnknown) {
+                                    $util.makeProp(message, "$unknowns", false);
+                                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                                }
                                 continue;
                             }
                         case 2: {
                                 if (wireType !== 0)
                                     break;
-                                message.editionDeprecated = reader.int32();
+                                value = reader.int32();
+                                if ($root.google.protobuf.Edition[value] !== $undefined)
+                                    message.editionDeprecated = value;
+                                else if (!reader.discardUnknown) {
+                                    $util.makeProp(message, "$unknowns", false);
+                                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                                }
                                 continue;
                             }
                         case 3: {
@@ -20319,7 +21224,13 @@ $root.google = (function() {
                         case 4: {
                                 if (wireType !== 0)
                                     break;
-                                message.editionRemoved = reader.int32();
+                                value = reader.int32();
+                                if ($root.google.protobuf.Edition[value] !== $undefined)
+                                    message.editionRemoved = value;
+                                else if (!reader.discardUnknown) {
+                                    $util.makeProp(message, "$unknowns", false);
+                                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                                }
                                 continue;
                             }
                         }
@@ -20328,6 +21239,11 @@ $root.google = (function() {
                             $util.makeProp(message, "$unknowns", false);
                             (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                         }
+                    }
+                    if (length !== $undefined) {
+                        if (reader.pos !== end)
+                            throw $RangeError("index out of range");
+                        reader.len = length;
                     }
                     if (_end !== $undefined)
                         throw $Error("missing end group");
@@ -20347,7 +21263,7 @@ $root.google = (function() {
                 FeatureSupport.decodeDelimited = function(reader) {
                     if (!(reader instanceof $Reader))
                         reader = new $Reader(reader);
-                    return this.decode(reader, reader.uint32());
+                    return this.decode(reader, reader.size());
                 };
 
                 /**
@@ -20444,12 +21360,6 @@ $root.google = (function() {
                         throw $Error("max depth exceeded");
                     var message = new $root.google.protobuf.FieldOptions.FeatureSupport();
                     switch (object.editionIntroduced) {
-                    default:
-                        if (typeof object.editionIntroduced === "number") {
-                            message.editionIntroduced = object.editionIntroduced;
-                            break;
-                        }
-                        break;
                     case "EDITION_UNKNOWN":
                     case 0:
                         message.editionIntroduced = 0;
@@ -20498,14 +21408,9 @@ $root.google = (function() {
                     case 2147483647:
                         message.editionIntroduced = 2147483647;
                         break;
+                    default:
                     }
                     switch (object.editionDeprecated) {
-                    default:
-                        if (typeof object.editionDeprecated === "number") {
-                            message.editionDeprecated = object.editionDeprecated;
-                            break;
-                        }
-                        break;
                     case "EDITION_UNKNOWN":
                     case 0:
                         message.editionDeprecated = 0;
@@ -20554,16 +21459,11 @@ $root.google = (function() {
                     case 2147483647:
                         message.editionDeprecated = 2147483647;
                         break;
+                    default:
                     }
                     if (object.deprecationWarning != null)
                         message.deprecationWarning = $String(object.deprecationWarning);
                     switch (object.editionRemoved) {
-                    default:
-                        if (typeof object.editionRemoved === "number") {
-                            message.editionRemoved = object.editionRemoved;
-                            break;
-                        }
-                        break;
                     case "EDITION_UNKNOWN":
                     case 0:
                         message.editionRemoved = 0;
@@ -20612,6 +21512,7 @@ $root.google = (function() {
                     case 2147483647:
                         message.editionRemoved = 2147483647;
                         break;
+                    default:
                     }
                     return message;
                 };
@@ -20789,7 +21690,7 @@ $root.google = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             OneofOptions.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -20810,7 +21711,17 @@ $root.google = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.google.protobuf.OneofOptions();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.google.protobuf.OneofOptions();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -20823,7 +21734,7 @@ $root.google = (function() {
                     case 1: {
                             if (wireType !== 2)
                                 break;
-                            message.features = $root.google.protobuf.FeatureSet.decode(reader, reader.uint32(), $undefined, _depth + 1, message.features);
+                            message.features = $root.google.protobuf.FeatureSet.decode(reader, reader.size(), $undefined, _depth + 1, message.features);
                             continue;
                         }
                     case 999: {
@@ -20831,7 +21742,7 @@ $root.google = (function() {
                                 break;
                             if (!(message.uninterpretedOption && message.uninterpretedOption.length))
                                 message.uninterpretedOption = [];
-                            message.uninterpretedOption.push($root.google.protobuf.UninterpretedOption.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message.uninterpretedOption.push($root.google.protobuf.UninterpretedOption.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     }
@@ -20840,6 +21751,11 @@ $root.google = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -20859,7 +21775,7 @@ $root.google = (function() {
             OneofOptions.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -21136,7 +22052,7 @@ $root.google = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             EnumOptions.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -21157,7 +22073,17 @@ $root.google = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.google.protobuf.EnumOptions();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.google.protobuf.EnumOptions();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -21188,7 +22114,7 @@ $root.google = (function() {
                     case 7: {
                             if (wireType !== 2)
                                 break;
-                            message.features = $root.google.protobuf.FeatureSet.decode(reader, reader.uint32(), $undefined, _depth + 1, message.features);
+                            message.features = $root.google.protobuf.FeatureSet.decode(reader, reader.size(), $undefined, _depth + 1, message.features);
                             continue;
                         }
                     case 999: {
@@ -21196,7 +22122,7 @@ $root.google = (function() {
                                 break;
                             if (!(message.uninterpretedOption && message.uninterpretedOption.length))
                                 message.uninterpretedOption = [];
-                            message.uninterpretedOption.push($root.google.protobuf.UninterpretedOption.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message.uninterpretedOption.push($root.google.protobuf.UninterpretedOption.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     case 42113038: {
@@ -21211,6 +22137,11 @@ $root.google = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -21230,7 +22161,7 @@ $root.google = (function() {
             EnumOptions.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -21534,7 +22465,7 @@ $root.google = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             EnumValueOptions.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -21555,7 +22486,17 @@ $root.google = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.google.protobuf.EnumValueOptions();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.google.protobuf.EnumValueOptions();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -21574,7 +22515,7 @@ $root.google = (function() {
                     case 2: {
                             if (wireType !== 2)
                                 break;
-                            message.features = $root.google.protobuf.FeatureSet.decode(reader, reader.uint32(), $undefined, _depth + 1, message.features);
+                            message.features = $root.google.protobuf.FeatureSet.decode(reader, reader.size(), $undefined, _depth + 1, message.features);
                             continue;
                         }
                     case 3: {
@@ -21586,7 +22527,7 @@ $root.google = (function() {
                     case 4: {
                             if (wireType !== 2)
                                 break;
-                            message.featureSupport = $root.google.protobuf.FieldOptions.FeatureSupport.decode(reader, reader.uint32(), $undefined, _depth + 1, message.featureSupport);
+                            message.featureSupport = $root.google.protobuf.FieldOptions.FeatureSupport.decode(reader, reader.size(), $undefined, _depth + 1, message.featureSupport);
                             continue;
                         }
                     case 999: {
@@ -21594,7 +22535,7 @@ $root.google = (function() {
                                 break;
                             if (!(message.uninterpretedOption && message.uninterpretedOption.length))
                                 message.uninterpretedOption = [];
-                            message.uninterpretedOption.push($root.google.protobuf.UninterpretedOption.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message.uninterpretedOption.push($root.google.protobuf.UninterpretedOption.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     }
@@ -21603,6 +22544,11 @@ $root.google = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -21622,7 +22568,7 @@ $root.google = (function() {
             EnumValueOptions.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -21901,7 +22847,7 @@ $root.google = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             ServiceOptions.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -21922,7 +22868,17 @@ $root.google = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.google.protobuf.ServiceOptions();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.google.protobuf.ServiceOptions();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -21935,7 +22891,7 @@ $root.google = (function() {
                     case 34: {
                             if (wireType !== 2)
                                 break;
-                            message.features = $root.google.protobuf.FeatureSet.decode(reader, reader.uint32(), $undefined, _depth + 1, message.features);
+                            message.features = $root.google.protobuf.FeatureSet.decode(reader, reader.size(), $undefined, _depth + 1, message.features);
                             continue;
                         }
                     case 33: {
@@ -21949,7 +22905,7 @@ $root.google = (function() {
                                 break;
                             if (!(message.uninterpretedOption && message.uninterpretedOption.length))
                                 message.uninterpretedOption = [];
-                            message.uninterpretedOption.push($root.google.protobuf.UninterpretedOption.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message.uninterpretedOption.push($root.google.protobuf.UninterpretedOption.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     }
@@ -21958,6 +22914,11 @@ $root.google = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -21977,7 +22938,7 @@ $root.google = (function() {
             ServiceOptions.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -22246,7 +23207,7 @@ $root.google = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             MethodOptions.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -22267,7 +23228,17 @@ $root.google = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.google.protobuf.MethodOptions();
+                var end, message, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.google.protobuf.MethodOptions();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -22286,13 +23257,19 @@ $root.google = (function() {
                     case 34: {
                             if (wireType !== 0)
                                 break;
-                            message.idempotencyLevel = reader.int32();
+                            value = reader.int32();
+                            if ($root.google.protobuf.MethodOptions.IdempotencyLevel[value] !== $undefined)
+                                message.idempotencyLevel = value;
+                            else if (!reader.discardUnknown) {
+                                $util.makeProp(message, "$unknowns", false);
+                                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                            }
                             continue;
                         }
                     case 35: {
                             if (wireType !== 2)
                                 break;
-                            message.features = $root.google.protobuf.FeatureSet.decode(reader, reader.uint32(), $undefined, _depth + 1, message.features);
+                            message.features = $root.google.protobuf.FeatureSet.decode(reader, reader.size(), $undefined, _depth + 1, message.features);
                             continue;
                         }
                     case 999: {
@@ -22300,7 +23277,7 @@ $root.google = (function() {
                                 break;
                             if (!(message.uninterpretedOption && message.uninterpretedOption.length))
                                 message.uninterpretedOption = [];
-                            message.uninterpretedOption.push($root.google.protobuf.UninterpretedOption.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message.uninterpretedOption.push($root.google.protobuf.UninterpretedOption.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     }
@@ -22309,6 +23286,11 @@ $root.google = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -22328,7 +23310,7 @@ $root.google = (function() {
             MethodOptions.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -22396,12 +23378,6 @@ $root.google = (function() {
                 if (object.deprecated != null)
                     message.deprecated = $Boolean(object.deprecated);
                 switch (object.idempotencyLevel) {
-                default:
-                    if (typeof object.idempotencyLevel === "number") {
-                        message.idempotencyLevel = object.idempotencyLevel;
-                        break;
-                    }
-                    break;
                 case "IDEMPOTENCY_UNKNOWN":
                 case 0:
                     message.idempotencyLevel = 0;
@@ -22414,6 +23390,7 @@ $root.google = (function() {
                 case 2:
                     message.idempotencyLevel = 2;
                     break;
+                default:
                 }
                 if (object.features != null) {
                     if (!$util.isObject(object.features))
@@ -22505,7 +23482,7 @@ $root.google = (function() {
              * @property {number} IDEMPOTENT=2 IDEMPOTENT value
              */
             MethodOptions.IdempotencyLevel = (function() {
-                var valuesById = {}, values = $Object.create(valuesById);
+                var valuesById = $Object.create(null), values = $Object.create(valuesById);
                 values[valuesById[0] = "IDEMPOTENCY_UNKNOWN"] = 0;
                 values[valuesById[1] = "NO_SIDE_EFFECTS"] = 1;
                 values[valuesById[2] = "IDEMPOTENT"] = 2;
@@ -22678,7 +23655,7 @@ $root.google = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             UninterpretedOption.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -22699,7 +23676,17 @@ $root.google = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.google.protobuf.UninterpretedOption();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.google.protobuf.UninterpretedOption();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -22714,7 +23701,7 @@ $root.google = (function() {
                                 break;
                             if (!(message.name && message.name.length))
                                 message.name = [];
-                            message.name.push($root.google.protobuf.UninterpretedOption.NamePart.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message.name.push($root.google.protobuf.UninterpretedOption.NamePart.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     case 3: {
@@ -22760,6 +23747,11 @@ $root.google = (function() {
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
                 }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
+                }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
                 return message;
@@ -22778,7 +23770,7 @@ $root.google = (function() {
             UninterpretedOption.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -23086,7 +24078,7 @@ $root.google = (function() {
                  * @returns {$protobuf.Writer} Writer
                  */
                 NamePart.encodeDelimited = function(message, writer) {
-                    return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                    return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                 };
 
                 /**
@@ -23107,7 +24099,17 @@ $root.google = (function() {
                         _depth = 0;
                     if (_depth > $Reader.recursionLimit)
                         throw $Error("max depth exceeded");
-                    var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.google.protobuf.UninterpretedOption.NamePart();
+                    var end, message;
+                    if (length === $undefined)
+                        end = reader.len;
+                    else {
+                        end = reader.pos + length;
+                        if (end > reader.len)
+                            throw $RangeError("index out of range");
+                        length = reader.len;
+                        reader.len = end;
+                    }
+                    message = _target || new $root.google.protobuf.UninterpretedOption.NamePart();
                     while (reader.pos < end) {
                         var start = reader.pos;
                         var tag = reader.tag();
@@ -23136,6 +24138,11 @@ $root.google = (function() {
                             (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                         }
                     }
+                    if (length !== $undefined) {
+                        if (reader.pos !== end)
+                            throw $RangeError("index out of range");
+                        reader.len = length;
+                    }
                     if (_end !== $undefined)
                         throw $Error("missing end group");
                     if (!$Object.hasOwnProperty.call(message, "namePart"))
@@ -23158,7 +24165,7 @@ $root.google = (function() {
                 NamePart.decodeDelimited = function(reader) {
                     if (!(reader instanceof $Reader))
                         reader = new $Reader(reader);
-                    return this.decode(reader, reader.uint32());
+                    return this.decode(reader, reader.size());
                 };
 
                 /**
@@ -23439,7 +24446,7 @@ $root.google = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             FeatureSet.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -23460,7 +24467,17 @@ $root.google = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.google.protobuf.FeatureSet();
+                var end, message, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.google.protobuf.FeatureSet();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -23473,49 +24490,97 @@ $root.google = (function() {
                     case 1: {
                             if (wireType !== 0)
                                 break;
-                            message.fieldPresence = reader.int32();
+                            value = reader.int32();
+                            if ($root.google.protobuf.FeatureSet.FieldPresence[value] !== $undefined)
+                                message.fieldPresence = value;
+                            else if (!reader.discardUnknown) {
+                                $util.makeProp(message, "$unknowns", false);
+                                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                            }
                             continue;
                         }
                     case 2: {
                             if (wireType !== 0)
                                 break;
-                            message.enumType = reader.int32();
+                            value = reader.int32();
+                            if ($root.google.protobuf.FeatureSet.EnumType[value] !== $undefined)
+                                message.enumType = value;
+                            else if (!reader.discardUnknown) {
+                                $util.makeProp(message, "$unknowns", false);
+                                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                            }
                             continue;
                         }
                     case 3: {
                             if (wireType !== 0)
                                 break;
-                            message.repeatedFieldEncoding = reader.int32();
+                            value = reader.int32();
+                            if ($root.google.protobuf.FeatureSet.RepeatedFieldEncoding[value] !== $undefined)
+                                message.repeatedFieldEncoding = value;
+                            else if (!reader.discardUnknown) {
+                                $util.makeProp(message, "$unknowns", false);
+                                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                            }
                             continue;
                         }
                     case 4: {
                             if (wireType !== 0)
                                 break;
-                            message.utf8Validation = reader.int32();
+                            value = reader.int32();
+                            if ($root.google.protobuf.FeatureSet.Utf8Validation[value] !== $undefined)
+                                message.utf8Validation = value;
+                            else if (!reader.discardUnknown) {
+                                $util.makeProp(message, "$unknowns", false);
+                                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                            }
                             continue;
                         }
                     case 5: {
                             if (wireType !== 0)
                                 break;
-                            message.messageEncoding = reader.int32();
+                            value = reader.int32();
+                            if ($root.google.protobuf.FeatureSet.MessageEncoding[value] !== $undefined)
+                                message.messageEncoding = value;
+                            else if (!reader.discardUnknown) {
+                                $util.makeProp(message, "$unknowns", false);
+                                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                            }
                             continue;
                         }
                     case 6: {
                             if (wireType !== 0)
                                 break;
-                            message.jsonFormat = reader.int32();
+                            value = reader.int32();
+                            if ($root.google.protobuf.FeatureSet.JsonFormat[value] !== $undefined)
+                                message.jsonFormat = value;
+                            else if (!reader.discardUnknown) {
+                                $util.makeProp(message, "$unknowns", false);
+                                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                            }
                             continue;
                         }
                     case 7: {
                             if (wireType !== 0)
                                 break;
-                            message.enforceNamingStyle = reader.int32();
+                            value = reader.int32();
+                            if ($root.google.protobuf.FeatureSet.EnforceNamingStyle[value] !== $undefined)
+                                message.enforceNamingStyle = value;
+                            else if (!reader.discardUnknown) {
+                                $util.makeProp(message, "$unknowns", false);
+                                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                            }
                             continue;
                         }
                     case 8: {
                             if (wireType !== 0)
                                 break;
-                            message.defaultSymbolVisibility = reader.int32();
+                            value = reader.int32();
+                            if ($root.google.protobuf.FeatureSet.VisibilityFeature.DefaultSymbolVisibility[value] !== $undefined)
+                                message.defaultSymbolVisibility = value;
+                            else if (!reader.discardUnknown) {
+                                $util.makeProp(message, "$unknowns", false);
+                                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                            }
                             continue;
                         }
                     }
@@ -23524,6 +24589,11 @@ $root.google = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -23543,7 +24613,7 @@ $root.google = (function() {
             FeatureSet.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -23658,12 +24728,6 @@ $root.google = (function() {
                     throw $Error("max depth exceeded");
                 var message = new $root.google.protobuf.FeatureSet();
                 switch (object.fieldPresence) {
-                default:
-                    if (typeof object.fieldPresence === "number") {
-                        message.fieldPresence = object.fieldPresence;
-                        break;
-                    }
-                    break;
                 case "FIELD_PRESENCE_UNKNOWN":
                 case 0:
                     message.fieldPresence = 0;
@@ -23680,14 +24744,9 @@ $root.google = (function() {
                 case 3:
                     message.fieldPresence = 3;
                     break;
+                default:
                 }
                 switch (object.enumType) {
-                default:
-                    if (typeof object.enumType === "number") {
-                        message.enumType = object.enumType;
-                        break;
-                    }
-                    break;
                 case "ENUM_TYPE_UNKNOWN":
                 case 0:
                     message.enumType = 0;
@@ -23700,14 +24759,9 @@ $root.google = (function() {
                 case 2:
                     message.enumType = 2;
                     break;
+                default:
                 }
                 switch (object.repeatedFieldEncoding) {
-                default:
-                    if (typeof object.repeatedFieldEncoding === "number") {
-                        message.repeatedFieldEncoding = object.repeatedFieldEncoding;
-                        break;
-                    }
-                    break;
                 case "REPEATED_FIELD_ENCODING_UNKNOWN":
                 case 0:
                     message.repeatedFieldEncoding = 0;
@@ -23720,14 +24774,9 @@ $root.google = (function() {
                 case 2:
                     message.repeatedFieldEncoding = 2;
                     break;
+                default:
                 }
                 switch (object.utf8Validation) {
-                default:
-                    if (typeof object.utf8Validation === "number") {
-                        message.utf8Validation = object.utf8Validation;
-                        break;
-                    }
-                    break;
                 case "UTF8_VALIDATION_UNKNOWN":
                 case 0:
                     message.utf8Validation = 0;
@@ -23740,14 +24789,9 @@ $root.google = (function() {
                 case 3:
                     message.utf8Validation = 3;
                     break;
+                default:
                 }
                 switch (object.messageEncoding) {
-                default:
-                    if (typeof object.messageEncoding === "number") {
-                        message.messageEncoding = object.messageEncoding;
-                        break;
-                    }
-                    break;
                 case "MESSAGE_ENCODING_UNKNOWN":
                 case 0:
                     message.messageEncoding = 0;
@@ -23760,14 +24804,9 @@ $root.google = (function() {
                 case 2:
                     message.messageEncoding = 2;
                     break;
+                default:
                 }
                 switch (object.jsonFormat) {
-                default:
-                    if (typeof object.jsonFormat === "number") {
-                        message.jsonFormat = object.jsonFormat;
-                        break;
-                    }
-                    break;
                 case "JSON_FORMAT_UNKNOWN":
                 case 0:
                     message.jsonFormat = 0;
@@ -23780,14 +24819,9 @@ $root.google = (function() {
                 case 2:
                     message.jsonFormat = 2;
                     break;
+                default:
                 }
                 switch (object.enforceNamingStyle) {
-                default:
-                    if (typeof object.enforceNamingStyle === "number") {
-                        message.enforceNamingStyle = object.enforceNamingStyle;
-                        break;
-                    }
-                    break;
                 case "ENFORCE_NAMING_STYLE_UNKNOWN":
                 case 0:
                     message.enforceNamingStyle = 0;
@@ -23800,14 +24834,9 @@ $root.google = (function() {
                 case 2:
                     message.enforceNamingStyle = 2;
                     break;
+                default:
                 }
                 switch (object.defaultSymbolVisibility) {
-                default:
-                    if (typeof object.defaultSymbolVisibility === "number") {
-                        message.defaultSymbolVisibility = object.defaultSymbolVisibility;
-                        break;
-                    }
-                    break;
                 case "DEFAULT_SYMBOL_VISIBILITY_UNKNOWN":
                 case 0:
                     message.defaultSymbolVisibility = 0;
@@ -23828,6 +24857,7 @@ $root.google = (function() {
                 case 4:
                     message.defaultSymbolVisibility = 4;
                     break;
+                default:
                 }
                 return message;
             };
@@ -23913,7 +24943,7 @@ $root.google = (function() {
              * @property {number} LEGACY_REQUIRED=3 LEGACY_REQUIRED value
              */
             FeatureSet.FieldPresence = (function() {
-                var valuesById = {}, values = $Object.create(valuesById);
+                var valuesById = $Object.create(null), values = $Object.create(valuesById);
                 values[valuesById[0] = "FIELD_PRESENCE_UNKNOWN"] = 0;
                 values[valuesById[1] = "EXPLICIT"] = 1;
                 values[valuesById[2] = "IMPLICIT"] = 2;
@@ -23930,7 +24960,7 @@ $root.google = (function() {
              * @property {number} CLOSED=2 CLOSED value
              */
             FeatureSet.EnumType = (function() {
-                var valuesById = {}, values = $Object.create(valuesById);
+                var valuesById = $Object.create(null), values = $Object.create(valuesById);
                 values[valuesById[0] = "ENUM_TYPE_UNKNOWN"] = 0;
                 values[valuesById[1] = "OPEN"] = 1;
                 values[valuesById[2] = "CLOSED"] = 2;
@@ -23946,7 +24976,7 @@ $root.google = (function() {
              * @property {number} EXPANDED=2 EXPANDED value
              */
             FeatureSet.RepeatedFieldEncoding = (function() {
-                var valuesById = {}, values = $Object.create(valuesById);
+                var valuesById = $Object.create(null), values = $Object.create(valuesById);
                 values[valuesById[0] = "REPEATED_FIELD_ENCODING_UNKNOWN"] = 0;
                 values[valuesById[1] = "PACKED"] = 1;
                 values[valuesById[2] = "EXPANDED"] = 2;
@@ -23962,7 +24992,7 @@ $root.google = (function() {
              * @property {number} NONE=3 NONE value
              */
             FeatureSet.Utf8Validation = (function() {
-                var valuesById = {}, values = $Object.create(valuesById);
+                var valuesById = $Object.create(null), values = $Object.create(valuesById);
                 values[valuesById[0] = "UTF8_VALIDATION_UNKNOWN"] = 0;
                 values[valuesById[2] = "VERIFY"] = 2;
                 values[valuesById[3] = "NONE"] = 3;
@@ -23978,7 +25008,7 @@ $root.google = (function() {
              * @property {number} DELIMITED=2 DELIMITED value
              */
             FeatureSet.MessageEncoding = (function() {
-                var valuesById = {}, values = $Object.create(valuesById);
+                var valuesById = $Object.create(null), values = $Object.create(valuesById);
                 values[valuesById[0] = "MESSAGE_ENCODING_UNKNOWN"] = 0;
                 values[valuesById[1] = "LENGTH_PREFIXED"] = 1;
                 values[valuesById[2] = "DELIMITED"] = 2;
@@ -23994,7 +25024,7 @@ $root.google = (function() {
              * @property {number} LEGACY_BEST_EFFORT=2 LEGACY_BEST_EFFORT value
              */
             FeatureSet.JsonFormat = (function() {
-                var valuesById = {}, values = $Object.create(valuesById);
+                var valuesById = $Object.create(null), values = $Object.create(valuesById);
                 values[valuesById[0] = "JSON_FORMAT_UNKNOWN"] = 0;
                 values[valuesById[1] = "ALLOW"] = 1;
                 values[valuesById[2] = "LEGACY_BEST_EFFORT"] = 2;
@@ -24010,7 +25040,7 @@ $root.google = (function() {
              * @property {number} STYLE_LEGACY=2 STYLE_LEGACY value
              */
             FeatureSet.EnforceNamingStyle = (function() {
-                var valuesById = {}, values = $Object.create(valuesById);
+                var valuesById = $Object.create(null), values = $Object.create(valuesById);
                 values[valuesById[0] = "ENFORCE_NAMING_STYLE_UNKNOWN"] = 0;
                 values[valuesById[1] = "STYLE2024"] = 1;
                 values[valuesById[2] = "STYLE_LEGACY"] = 2;
@@ -24101,7 +25131,7 @@ $root.google = (function() {
                  * @returns {$protobuf.Writer} Writer
                  */
                 VisibilityFeature.encodeDelimited = function(message, writer) {
-                    return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                    return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                 };
 
                 /**
@@ -24122,7 +25152,17 @@ $root.google = (function() {
                         _depth = 0;
                     if (_depth > $Reader.recursionLimit)
                         throw $Error("max depth exceeded");
-                    var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.google.protobuf.FeatureSet.VisibilityFeature();
+                    var end, message;
+                    if (length === $undefined)
+                        end = reader.len;
+                    else {
+                        end = reader.pos + length;
+                        if (end > reader.len)
+                            throw $RangeError("index out of range");
+                        length = reader.len;
+                        reader.len = end;
+                    }
+                    message = _target || new $root.google.protobuf.FeatureSet.VisibilityFeature();
                     while (reader.pos < end) {
                         var start = reader.pos;
                         var tag = reader.tag();
@@ -24135,6 +25175,11 @@ $root.google = (function() {
                             $util.makeProp(message, "$unknowns", false);
                             (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                         }
+                    }
+                    if (length !== $undefined) {
+                        if (reader.pos !== end)
+                            throw $RangeError("index out of range");
+                        reader.len = length;
                     }
                     if (_end !== $undefined)
                         throw $Error("missing end group");
@@ -24154,7 +25199,7 @@ $root.google = (function() {
                 VisibilityFeature.decodeDelimited = function(reader) {
                     if (!(reader instanceof $Reader))
                         reader = new $Reader(reader);
-                    return this.decode(reader, reader.uint32());
+                    return this.decode(reader, reader.size());
                 };
 
                 /**
@@ -24244,7 +25289,7 @@ $root.google = (function() {
                  * @property {number} STRICT=4 STRICT value
                  */
                 VisibilityFeature.DefaultSymbolVisibility = (function() {
-                    var valuesById = {}, values = $Object.create(valuesById);
+                    var valuesById = $Object.create(null), values = $Object.create(valuesById);
                     values[valuesById[0] = "DEFAULT_SYMBOL_VISIBILITY_UNKNOWN"] = 0;
                     values[valuesById[1] = "EXPORT_ALL"] = 1;
                     values[valuesById[2] = "EXPORT_TOP_LEVEL"] = 2;
@@ -24378,7 +25423,7 @@ $root.google = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             FeatureSetDefaults.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -24399,7 +25444,17 @@ $root.google = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.google.protobuf.FeatureSetDefaults();
+                var end, message, value;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.google.protobuf.FeatureSetDefaults();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -24414,19 +25469,31 @@ $root.google = (function() {
                                 break;
                             if (!(message.defaults && message.defaults.length))
                                 message.defaults = [];
-                            message.defaults.push($root.google.protobuf.FeatureSetDefaults.FeatureSetEditionDefault.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message.defaults.push($root.google.protobuf.FeatureSetDefaults.FeatureSetEditionDefault.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     case 4: {
                             if (wireType !== 0)
                                 break;
-                            message.minimumEdition = reader.int32();
+                            value = reader.int32();
+                            if ($root.google.protobuf.Edition[value] !== $undefined)
+                                message.minimumEdition = value;
+                            else if (!reader.discardUnknown) {
+                                $util.makeProp(message, "$unknowns", false);
+                                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                            }
                             continue;
                         }
                     case 5: {
                             if (wireType !== 0)
                                 break;
-                            message.maximumEdition = reader.int32();
+                            value = reader.int32();
+                            if ($root.google.protobuf.Edition[value] !== $undefined)
+                                message.maximumEdition = value;
+                            else if (!reader.discardUnknown) {
+                                $util.makeProp(message, "$unknowns", false);
+                                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                            }
                             continue;
                         }
                     }
@@ -24435,6 +25502,11 @@ $root.google = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -24454,7 +25526,7 @@ $root.google = (function() {
             FeatureSetDefaults.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -24549,12 +25621,6 @@ $root.google = (function() {
                     }
                 }
                 switch (object.minimumEdition) {
-                default:
-                    if (typeof object.minimumEdition === "number") {
-                        message.minimumEdition = object.minimumEdition;
-                        break;
-                    }
-                    break;
                 case "EDITION_UNKNOWN":
                 case 0:
                     message.minimumEdition = 0;
@@ -24603,14 +25669,9 @@ $root.google = (function() {
                 case 2147483647:
                     message.minimumEdition = 2147483647;
                     break;
+                default:
                 }
                 switch (object.maximumEdition) {
-                default:
-                    if (typeof object.maximumEdition === "number") {
-                        message.maximumEdition = object.maximumEdition;
-                        break;
-                    }
-                    break;
                 case "EDITION_UNKNOWN":
                 case 0:
                     message.maximumEdition = 0;
@@ -24659,6 +25720,7 @@ $root.google = (function() {
                 case 2147483647:
                     message.maximumEdition = 2147483647;
                     break;
+                default:
                 }
                 return message;
             };
@@ -24840,7 +25902,7 @@ $root.google = (function() {
                  * @returns {$protobuf.Writer} Writer
                  */
                 FeatureSetEditionDefault.encodeDelimited = function(message, writer) {
-                    return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                    return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                 };
 
                 /**
@@ -24861,7 +25923,17 @@ $root.google = (function() {
                         _depth = 0;
                     if (_depth > $Reader.recursionLimit)
                         throw $Error("max depth exceeded");
-                    var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.google.protobuf.FeatureSetDefaults.FeatureSetEditionDefault();
+                    var end, message, value;
+                    if (length === $undefined)
+                        end = reader.len;
+                    else {
+                        end = reader.pos + length;
+                        if (end > reader.len)
+                            throw $RangeError("index out of range");
+                        length = reader.len;
+                        reader.len = end;
+                    }
+                    message = _target || new $root.google.protobuf.FeatureSetDefaults.FeatureSetEditionDefault();
                     while (reader.pos < end) {
                         var start = reader.pos;
                         var tag = reader.tag();
@@ -24874,19 +25946,25 @@ $root.google = (function() {
                         case 3: {
                                 if (wireType !== 0)
                                     break;
-                                message.edition = reader.int32();
+                                value = reader.int32();
+                                if ($root.google.protobuf.Edition[value] !== $undefined)
+                                    message.edition = value;
+                                else if (!reader.discardUnknown) {
+                                    $util.makeProp(message, "$unknowns", false);
+                                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                                }
                                 continue;
                             }
                         case 4: {
                                 if (wireType !== 2)
                                     break;
-                                message.overridableFeatures = $root.google.protobuf.FeatureSet.decode(reader, reader.uint32(), $undefined, _depth + 1, message.overridableFeatures);
+                                message.overridableFeatures = $root.google.protobuf.FeatureSet.decode(reader, reader.size(), $undefined, _depth + 1, message.overridableFeatures);
                                 continue;
                             }
                         case 5: {
                                 if (wireType !== 2)
                                     break;
-                                message.fixedFeatures = $root.google.protobuf.FeatureSet.decode(reader, reader.uint32(), $undefined, _depth + 1, message.fixedFeatures);
+                                message.fixedFeatures = $root.google.protobuf.FeatureSet.decode(reader, reader.size(), $undefined, _depth + 1, message.fixedFeatures);
                                 continue;
                             }
                         }
@@ -24895,6 +25973,11 @@ $root.google = (function() {
                             $util.makeProp(message, "$unknowns", false);
                             (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                         }
+                    }
+                    if (length !== $undefined) {
+                        if (reader.pos !== end)
+                            throw $RangeError("index out of range");
+                        reader.len = length;
                     }
                     if (_end !== $undefined)
                         throw $Error("missing end group");
@@ -24914,7 +25997,7 @@ $root.google = (function() {
                 FeatureSetEditionDefault.decodeDelimited = function(reader) {
                     if (!(reader instanceof $Reader))
                         reader = new $Reader(reader);
-                    return this.decode(reader, reader.uint32());
+                    return this.decode(reader, reader.size());
                 };
 
                 /**
@@ -24982,12 +26065,6 @@ $root.google = (function() {
                         throw $Error("max depth exceeded");
                     var message = new $root.google.protobuf.FeatureSetDefaults.FeatureSetEditionDefault();
                     switch (object.edition) {
-                    default:
-                        if (typeof object.edition === "number") {
-                            message.edition = object.edition;
-                            break;
-                        }
-                        break;
                     case "EDITION_UNKNOWN":
                     case 0:
                         message.edition = 0;
@@ -25036,6 +26113,7 @@ $root.google = (function() {
                     case 2147483647:
                         message.edition = 2147483647;
                         break;
+                    default:
                     }
                     if (object.overridableFeatures != null) {
                         if (!$util.isObject(object.overridableFeatures))
@@ -25209,7 +26287,7 @@ $root.google = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             SourceCodeInfo.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -25230,7 +26308,17 @@ $root.google = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.google.protobuf.SourceCodeInfo();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.google.protobuf.SourceCodeInfo();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -25245,7 +26333,7 @@ $root.google = (function() {
                                 break;
                             if (!(message.location && message.location.length))
                                 message.location = [];
-                            message.location.push($root.google.protobuf.SourceCodeInfo.Location.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message.location.push($root.google.protobuf.SourceCodeInfo.Location.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     }
@@ -25254,6 +26342,11 @@ $root.google = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -25273,7 +26366,7 @@ $root.google = (function() {
             SourceCodeInfo.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -25502,18 +26595,10 @@ $root.google = (function() {
                         _depth = 0;
                     if (_depth > $util.recursionLimit)
                         throw $Error("max depth exceeded");
-                    if (message.path != null && message.path.length) {
-                        writer.uint32(/* id 1, wireType 2 =*/10).fork();
-                        for (var i = 0; i < message.path.length; ++i)
-                            writer.int32(message.path[i]);
-                        writer.ldelim();
-                    }
-                    if (message.span != null && message.span.length) {
-                        writer.uint32(/* id 2, wireType 2 =*/18).fork();
-                        for (var i = 0; i < message.span.length; ++i)
-                            writer.int32(message.span[i]);
-                        writer.ldelim();
-                    }
+                    if (message.path != null && message.path.length)
+                        writer.uint32(/* id 1, wireType 2 =*/10).int32s(message.path);
+                    if (message.span != null && message.span.length)
+                        writer.uint32(/* id 2, wireType 2 =*/18).int32s(message.span);
                     if (message.leadingComments != null && $Object.hasOwnProperty.call(message, "leadingComments"))
                         writer.uint32(/* id 3, wireType 2 =*/26).string(message.leadingComments);
                     if (message.trailingComments != null && $Object.hasOwnProperty.call(message, "trailingComments"))
@@ -25537,7 +26622,7 @@ $root.google = (function() {
                  * @returns {$protobuf.Writer} Writer
                  */
                 Location.encodeDelimited = function(message, writer) {
-                    return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                    return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                 };
 
                 /**
@@ -25558,7 +26643,17 @@ $root.google = (function() {
                         _depth = 0;
                     if (_depth > $Reader.recursionLimit)
                         throw $Error("max depth exceeded");
-                    var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.google.protobuf.SourceCodeInfo.Location();
+                    var end, message;
+                    if (length === $undefined)
+                        end = reader.len;
+                    else {
+                        end = reader.pos + length;
+                        if (end > reader.len)
+                            throw $RangeError("index out of range");
+                        length = reader.len;
+                        reader.len = end;
+                    }
+                    message = _target || new $root.google.protobuf.SourceCodeInfo.Location();
                     while (reader.pos < end) {
                         var start = reader.pos;
                         var tag = reader.tag();
@@ -25572,9 +26667,7 @@ $root.google = (function() {
                                 if (wireType === 2) {
                                     if (!(message.path && message.path.length))
                                         message.path = [];
-                                    var end2 = reader.uint32() + reader.pos;
-                                    while (reader.pos < end2)
-                                        message.path.push(reader.int32());
+                                    reader.int32s(message.path);
                                     continue;
                                 }
                                 if (wireType !== 0)
@@ -25588,9 +26681,7 @@ $root.google = (function() {
                                 if (wireType === 2) {
                                     if (!(message.span && message.span.length))
                                         message.span = [];
-                                    var end2 = reader.uint32() + reader.pos;
-                                    while (reader.pos < end2)
-                                        message.span.push(reader.int32());
+                                    reader.int32s(message.span);
                                     continue;
                                 }
                                 if (wireType !== 0)
@@ -25627,6 +26718,11 @@ $root.google = (function() {
                             (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                         }
                     }
+                    if (length !== $undefined) {
+                        if (reader.pos !== end)
+                            throw $RangeError("index out of range");
+                        reader.len = length;
+                    }
                     if (_end !== $undefined)
                         throw $Error("missing end group");
                     return message;
@@ -25645,7 +26741,7 @@ $root.google = (function() {
                 Location.decodeDelimited = function(reader) {
                     if (!(reader instanceof $Reader))
                         reader = new $Reader(reader);
-                    return this.decode(reader, reader.uint32());
+                    return this.decode(reader, reader.size());
                 };
 
                 /**
@@ -25915,7 +27011,7 @@ $root.google = (function() {
              * @returns {$protobuf.Writer} Writer
              */
             GeneratedCodeInfo.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
             };
 
             /**
@@ -25936,7 +27032,17 @@ $root.google = (function() {
                     _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                     throw $Error("max depth exceeded");
-                var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.google.protobuf.GeneratedCodeInfo();
+                var end, message;
+                if (length === $undefined)
+                    end = reader.len;
+                else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                        throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                }
+                message = _target || new $root.google.protobuf.GeneratedCodeInfo();
                 while (reader.pos < end) {
                     var start = reader.pos;
                     var tag = reader.tag();
@@ -25951,7 +27057,7 @@ $root.google = (function() {
                                 break;
                             if (!(message.annotation && message.annotation.length))
                                 message.annotation = [];
-                            message.annotation.push($root.google.protobuf.GeneratedCodeInfo.Annotation.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                            message.annotation.push($root.google.protobuf.GeneratedCodeInfo.Annotation.decode(reader, reader.size(), $undefined, _depth + 1));
                             continue;
                         }
                     }
@@ -25960,6 +27066,11 @@ $root.google = (function() {
                         $util.makeProp(message, "$unknowns", false);
                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                     }
+                }
+                if (length !== $undefined) {
+                    if (reader.pos !== end)
+                        throw $RangeError("index out of range");
+                    reader.len = length;
                 }
                 if (_end !== $undefined)
                     throw $Error("missing end group");
@@ -25979,7 +27090,7 @@ $root.google = (function() {
             GeneratedCodeInfo.decodeDelimited = function(reader) {
                 if (!(reader instanceof $Reader))
                     reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
+                return this.decode(reader, reader.size());
             };
 
             /**
@@ -26206,12 +27317,8 @@ $root.google = (function() {
                         _depth = 0;
                     if (_depth > $util.recursionLimit)
                         throw $Error("max depth exceeded");
-                    if (message.path != null && message.path.length) {
-                        writer.uint32(/* id 1, wireType 2 =*/10).fork();
-                        for (var i = 0; i < message.path.length; ++i)
-                            writer.int32(message.path[i]);
-                        writer.ldelim();
-                    }
+                    if (message.path != null && message.path.length)
+                        writer.uint32(/* id 1, wireType 2 =*/10).int32s(message.path);
                     if (message.sourceFile != null && $Object.hasOwnProperty.call(message, "sourceFile"))
                         writer.uint32(/* id 2, wireType 2 =*/18).string(message.sourceFile);
                     if (message.begin != null && $Object.hasOwnProperty.call(message, "begin"))
@@ -26236,7 +27343,7 @@ $root.google = (function() {
                  * @returns {$protobuf.Writer} Writer
                  */
                 Annotation.encodeDelimited = function(message, writer) {
-                    return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                    return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                 };
 
                 /**
@@ -26257,7 +27364,17 @@ $root.google = (function() {
                         _depth = 0;
                     if (_depth > $Reader.recursionLimit)
                         throw $Error("max depth exceeded");
-                    var end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.google.protobuf.GeneratedCodeInfo.Annotation();
+                    var end, message, value;
+                    if (length === $undefined)
+                        end = reader.len;
+                    else {
+                        end = reader.pos + length;
+                        if (end > reader.len)
+                            throw $RangeError("index out of range");
+                        length = reader.len;
+                        reader.len = end;
+                    }
+                    message = _target || new $root.google.protobuf.GeneratedCodeInfo.Annotation();
                     while (reader.pos < end) {
                         var start = reader.pos;
                         var tag = reader.tag();
@@ -26271,9 +27388,7 @@ $root.google = (function() {
                                 if (wireType === 2) {
                                     if (!(message.path && message.path.length))
                                         message.path = [];
-                                    var end2 = reader.uint32() + reader.pos;
-                                    while (reader.pos < end2)
-                                        message.path.push(reader.int32());
+                                    reader.int32s(message.path);
                                     continue;
                                 }
                                 if (wireType !== 0)
@@ -26304,7 +27419,13 @@ $root.google = (function() {
                         case 5: {
                                 if (wireType !== 0)
                                     break;
-                                message.semantic = reader.int32();
+                                value = reader.int32();
+                                if ($root.google.protobuf.GeneratedCodeInfo.Annotation.Semantic[value] !== $undefined)
+                                    message.semantic = value;
+                                else if (!reader.discardUnknown) {
+                                    $util.makeProp(message, "$unknowns", false);
+                                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                                }
                                 continue;
                             }
                         }
@@ -26313,6 +27434,11 @@ $root.google = (function() {
                             $util.makeProp(message, "$unknowns", false);
                             (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                         }
+                    }
+                    if (length !== $undefined) {
+                        if (reader.pos !== end)
+                            throw $RangeError("index out of range");
+                        reader.len = length;
                     }
                     if (_end !== $undefined)
                         throw $Error("missing end group");
@@ -26332,7 +27458,7 @@ $root.google = (function() {
                 Annotation.decodeDelimited = function(reader) {
                     if (!(reader instanceof $Reader))
                         reader = new $Reader(reader);
-                    return this.decode(reader, reader.uint32());
+                    return this.decode(reader, reader.size());
                 };
 
                 /**
@@ -26410,12 +27536,6 @@ $root.google = (function() {
                     if (object.end != null)
                         message.end = object.end | 0;
                     switch (object.semantic) {
-                    default:
-                        if (typeof object.semantic === "number") {
-                            message.semantic = object.semantic;
-                            break;
-                        }
-                        break;
                     case "NONE":
                     case 0:
                         message.semantic = 0;
@@ -26428,6 +27548,7 @@ $root.google = (function() {
                     case 2:
                         message.semantic = 2;
                         break;
+                    default:
                     }
                     return message;
                 };
@@ -26507,7 +27628,7 @@ $root.google = (function() {
                  * @property {number} ALIAS=2 ALIAS value
                  */
                 Annotation.Semantic = (function() {
-                    var valuesById = {}, values = $Object.create(valuesById);
+                    var valuesById = $Object.create(null), values = $Object.create(valuesById);
                     values[valuesById[0] = "NONE"] = 0;
                     values[valuesById[1] = "SET"] = 1;
                     values[valuesById[2] = "ALIAS"] = 2;
@@ -26529,7 +27650,7 @@ $root.google = (function() {
          * @property {number} VISIBILITY_EXPORT=2 VISIBILITY_EXPORT value
          */
         protobuf.SymbolVisibility = (function() {
-            var valuesById = {}, values = $Object.create(valuesById);
+            var valuesById = $Object.create(null), values = $Object.create(valuesById);
             values[valuesById[0] = "VISIBILITY_UNSET"] = 0;
             values[valuesById[1] = "VISIBILITY_LOCAL"] = 1;
             values[valuesById[2] = "VISIBILITY_EXPORT"] = 2;

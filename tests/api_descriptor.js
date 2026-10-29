@@ -3,6 +3,35 @@ var tape = require("tape");
 var protobuf = require("../index");
 var descriptor = require("../ext/descriptor");
 
+tape.test("descriptor - bundled common field names", function(test) {
+    var root = new protobuf.Root().loadSync("google/protobuf/struct.proto", { keepCase: true });
+    var descriptorSet = root.toDescriptor("proto3");
+    var value = descriptorSet.file[0].messageType.filter(function(type) {
+        return type.name === "Value";
+    })[0];
+
+    test.same(value.field.map(function(field) {
+        return field.name;
+    }), [ "null_value", "number_value", "string_value", "bool_value", "struct_value", "list_value" ], "uses original proto field names");
+    test.end();
+});
+
+tape.test("descriptor - custom enum JSON names", function(test) {
+    var enm = protobuf.parse(`edition = "2026";
+enum Choice {
+  ZERO = 0;
+  CUSTOM = 1 [(pb.enumvalue.json).string = "custom", deprecated = true];
+  EMPTY = 2 [(pb.enumvalue.json).string = ""];
+}`).root.lookupEnum("Choice");
+    var bytes = descriptor.EnumDescriptorProto.encode(enm.toDescriptor()).finish(),
+        decoded = descriptor.EnumDescriptorProto.decode(bytes);
+    test.same(decoded.value[1].options[".pb.enumvalue.json"].string, "custom", "decodes the registered option extension");
+    test.same(protobuf.Enum.fromDescriptor(decoded, "2026").valuesOptions, enm.valuesOptions, "preserves custom names and ordinary options through binary descriptors");
+    decoded.value[2].options[".pb.enumvalue.json"] = {};
+    test.equal(protobuf.Enum.fromDescriptor(decoded, "2026").valuesOptions.EMPTY["(pb.enumvalue.json).string"], "", "defaults a present option to the empty name");
+    test.end();
+});
+
 tape.test("descriptor - proto2 to proto3", function (test) {
     // load document with extended field imported multiple times
     var root = protobuf.loadSync(path.resolve(__dirname, "data/test.proto"));
@@ -47,6 +76,55 @@ tape.test("descriptor - proto2 roundtrip", function (test) {
     test.ok(Message.fields.explicit.hasPresence, "presence is preserved");
     test.ok(Message.fields.packed.packed, "packed is preserved");
     test.notOk(Message.fields.unpacked.packed, "expanded is preserved");
+
+    test.end();
+});
+
+tape.test("descriptor - numeric defaults", function(test) {
+    var root = protobuf.Root.fromDescriptor(descriptor.FileDescriptorSet.create({
+        file: [{
+            name: "defaults.proto",
+            syntax: "proto2",
+            messageType: [{
+                name: "Message",
+                field: [
+                    { name: "floatValue", number: 1, label: 1, type: 2, defaultValue: "8.999999488e+09" },
+                    { name: "doubleValue", number: 2, label: 1, type: 1, defaultValue: "7e+22" },
+                    { name: "negativeZero", number: 3, label: 1, type: 2, defaultValue: "-0" },
+                    { name: "positiveInfinity", number: 4, label: 1, type: 1, defaultValue: "inf" },
+                    { name: "negativeInfinity", number: 5, label: 1, type: 1, defaultValue: "-inf" },
+                    { name: "notANumber", number: 6, label: 1, type: 1, defaultValue: "nan" },
+                    { name: "int32Value", number: 7, label: 1, type: 5, defaultValue: "-123456789" },
+                    { name: "int64Value", number: 8, label: 1, type: 3, defaultValue: "-9123456789123456789" },
+                    { name: "uint64Value", number: 9, label: 1, type: 4, defaultValue: "10123456789123456789" },
+                    { name: "stringValue", number: 10, label: 1, type: 9, defaultValue: "123" }
+                ]
+            }]
+        }]
+    })).resolveAll();
+    var Message = root.lookupType("Message"),
+        message = Message.create();
+
+    test.equal(message.floatValue, 8999999488, "parses an exponent float default");
+    test.equal(message.doubleValue, 7e22, "parses an exponent double default");
+    test.ok(Object.is(message.negativeZero, -0), "preserves a negative zero float default");
+    test.equal(message.positiveInfinity, Infinity, "parses a positive infinity default");
+    test.equal(message.negativeInfinity, -Infinity, "parses a negative infinity default");
+    test.ok(Number.isNaN(message.notANumber), "parses a nan default");
+    test.equal(message.int32Value, -123456789, "parses a negative int32 default");
+    test.equal(message.int64Value.toString(), "-9123456789123456789", "parses an exact int64 default");
+    test.equal(message.uint64Value.toString(), "10123456789123456789", "parses an exact uint64 default");
+    test.equal(message.stringValue, "123", "keeps a numeric-looking string default");
+    test.throws(function() {
+        protobuf.Field.fromDescriptor(descriptor.FieldDescriptorProto.create({
+            name: "value", number: 1, label: 1, type: 1, defaultValue: "7junk"
+        }));
+    }, /illegal default value for double/, "rejects an invalid floating-point default");
+    test.throws(function() {
+        protobuf.Field.fromDescriptor(descriptor.FieldDescriptorProto.create({
+            name: "value", number: 1, label: 1, type: 3, defaultValue: "7junk"
+        }));
+    }, /illegal default value for int64/, "rejects an invalid integer default");
 
     test.end();
 });
@@ -181,6 +259,10 @@ tape.test("descriptor - edition 2023 file roundtrip", function (test) {
     };
     var root = protobuf.Root.fromJSON(json);
 
+    var edition2026 = root.toDescriptor("2026");
+    test.equal(edition2026.file[0].edition, descriptor.Edition.EDITION_2026, "writes edition 2026");
+    test.equal(protobuf.Root.fromDescriptor(edition2026).nested.Message._edition, "2026", "reads edition 2026");
+
     // convert to Descriptor Set
     const decodedDescriptorSet = root.toDescriptor("2023");
     
@@ -220,6 +302,37 @@ tape.test("descriptor - imports file-level edition features", function(test) {
     test.notOk(Message.fields.expanded.packed, "uses file-level expanded default");
     test.ok(Message.fields.packed.packed, "keeps field-level packed override");
     test.notOk(Nested.fields.expanded.packed, "nested field inherits file-level default");
+
+    test.end();
+});
+
+tape.test("descriptor - symbol visibility", function(test) {
+    var type = protobuf.Type.fromDescriptor(descriptor.DescriptorProto.create({
+            name: "LocalMessage",
+            visibility: descriptor.SymbolVisibility.VISIBILITY_LOCAL,
+            nestedType: [{
+                name: "NestedMessage",
+                visibility: descriptor.SymbolVisibility.VISIBILITY_EXPORT
+            }],
+            enumType: [{
+                name: "NestedEnum",
+                visibility: descriptor.SymbolVisibility.VISIBILITY_LOCAL
+            }]
+        }), "2024"),
+        enm = protobuf.Enum.fromDescriptor(descriptor.EnumDescriptorProto.create({
+            name: "ExportedEnum",
+            visibility: descriptor.SymbolVisibility.VISIBILITY_EXPORT
+        }), "2024");
+
+    test.equal(type.visibility, "local", "imports message visibility");
+    test.equal(type.lookupType("NestedMessage").visibility, "export", "imports nested message visibility");
+    test.equal(type.lookupEnum("NestedEnum").visibility, "local", "imports nested enum visibility");
+    var typeDescriptor = type.toDescriptor("2024");
+    test.equal(typeDescriptor.visibility, descriptor.SymbolVisibility.VISIBILITY_LOCAL, "exports message visibility");
+    test.equal(typeDescriptor.nestedType[0].visibility, descriptor.SymbolVisibility.VISIBILITY_EXPORT, "exports nested message visibility");
+    test.equal(typeDescriptor.enumType[0].visibility, descriptor.SymbolVisibility.VISIBILITY_LOCAL, "exports nested enum visibility");
+    test.equal(enm.visibility, "export", "imports enum visibility");
+    test.equal(enm.toDescriptor().visibility, descriptor.SymbolVisibility.VISIBILITY_EXPORT, "exports enum visibility");
 
     test.end();
 });
@@ -484,13 +597,35 @@ tape.test("descriptor - oneof and enum value options", function(test) {
                 }
             }]
         }),
-        enm = protobuf.Enum.fromDescriptor(enumDescriptor);
+        enm = protobuf.Enum.fromDescriptor(enumDescriptor),
+        unsafeEnumDescriptor = descriptor.EnumDescriptorProto.create({
+            name: "Unsafe",
+            value: [{
+                name: "__proto__",
+                number: 0,
+                options: {
+                    deprecated: true
+                }
+            }, {
+                name: "OK",
+                number: 1,
+                options: {
+                    deprecated: false
+                }
+            }]
+        }),
+        unsafe = protobuf.Enum.fromDescriptor(unsafeEnumDescriptor);
 
     test.same(oneof.options, { features: { field_presence: "EXPLICIT" } }, "preserves oneof options");
     test.equal(oneof.toDescriptor().options.features.fieldPresence, fieldPresence, "emits oneof options");
     test.same(enm.valuesOptions.ON, { deprecated: true, features: { field_presence: "EXPLICIT" } }, "preserves enum value options");
     test.equal(enm.toDescriptor().value[0].options.deprecated, true, "emits enum value options");
     test.equal(enm.toDescriptor().value[0].options.features.fieldPresence, fieldPresence, "emits enum value features");
+    test.equal(unsafe.values.OK, 1, "keeps safe enum value");
+    test.equal(unsafe.valuesById[1], "OK", "keeps safe enum value by id");
+    test.notOk(Object.prototype.hasOwnProperty.call(unsafe.values, "__proto__"), "skips unsafe enum value name");
+    test.equal(unsafe.valuesOptions.deprecated, undefined, "does not expose unsafe enum value options through prototype");
+    test.same(unsafe.valuesOptions.OK, { deprecated: false }, "keeps safe enum value options");
 
     test.end();
 });

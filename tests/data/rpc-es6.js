@@ -3,7 +3,7 @@ import $protobuf from "protobufjs/minimal.js";
 
 // Common aliases
 const $Reader = $protobuf.Reader, $Writer = $protobuf.Writer, $util = $protobuf.util;
-const $Object = $util.global.Object, $undefined = $util.global.undefined, $Error = $util.global.Error, $TypeError = $util.global.TypeError, $String = $util.global.String, $Number = $util.global.Number;
+const $Object = $util.global.Object, $undefined = $util.global.undefined, $Error = $util.global.Error, $RangeError = $util.global.RangeError, $TypeError = $util.global.TypeError, $String = $util.global.String, $Number = $util.global.Number;
 
 // Exported root namespace
 const $root = $protobuf.roots["test_rpc"] || ($protobuf.roots["test_rpc"] = {});
@@ -24,7 +24,7 @@ export const MyService = $root.MyService = (() => {
         $protobuf.rpc.Service.call(this, rpcImpl, requestDelimited, responseDelimited);
     };
 
-    (MyService.prototype = $Object.create($protobuf.rpc.Service.prototype)).constructor = MyService;
+    $Object.defineProperty(MyService.prototype = $Object.create($protobuf.rpc.Service.prototype), "constructor", { value: MyService, writable: true, enumerable: false, configurable: true });
 
     /**
      * Creates new MyService service using the specified rpc implementation.
@@ -161,7 +161,7 @@ export const MyRequest = $root.MyRequest = (() => {
             _depth = 0;
         if (_depth > $util.recursionLimit)
             throw $Error("max depth exceeded");
-        if (message.path != null && $Object.hasOwnProperty.call(message, "path"))
+        if (message.path != null && $Object.hasOwnProperty.call(message, "path") && message.path !== "")
             writer.uint32(/* id 1, wireType 2 =*/10).string(message.path);
         if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
             for (let i = 0; i < message.$unknowns.length; ++i)
@@ -179,7 +179,7 @@ export const MyRequest = $root.MyRequest = (() => {
      * @returns {$protobuf.Writer} Writer
      */
     MyRequest.encodeDelimited = function(message, writer) {
-        return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+        return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
     };
 
     /**
@@ -200,7 +200,17 @@ export const MyRequest = $root.MyRequest = (() => {
             _depth = 0;
         if (_depth > $Reader.recursionLimit)
             throw $Error("max depth exceeded");
-        let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.MyRequest(), value;
+        let end, message, value;
+        if (length === $undefined)
+            end = reader.len;
+        else {
+            end = reader.pos + length;
+            if (end > reader.len)
+                throw $RangeError("index out of range");
+            length = reader.len;
+            reader.len = end;
+        }
+        message = _target || new $root.MyRequest();
         while (reader.pos < end) {
             let start = reader.pos;
             let tag = reader.tag();
@@ -226,6 +236,11 @@ export const MyRequest = $root.MyRequest = (() => {
                 (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
             }
         }
+        if (length !== $undefined) {
+            if (reader.pos !== end)
+                throw $RangeError("index out of range");
+            reader.len = length;
+        }
         if (_end !== $undefined)
             throw $Error("missing end group");
         return message;
@@ -244,7 +259,7 @@ export const MyRequest = $root.MyRequest = (() => {
     MyRequest.decodeDelimited = function(reader) {
         if (!(reader instanceof $Reader))
             reader = new $Reader(reader);
-        return this.decode(reader, reader.uint32());
+        return this.decode(reader, reader.size());
     };
 
     /**
@@ -421,7 +436,7 @@ export const MyResponse = $root.MyResponse = (() => {
             _depth = 0;
         if (_depth > $util.recursionLimit)
             throw $Error("max depth exceeded");
-        if (message.status != null && $Object.hasOwnProperty.call(message, "status"))
+        if (message.status != null && $Object.hasOwnProperty.call(message, "status") && message.status !== 0)
             writer.uint32(/* id 2, wireType 0 =*/16).int32(message.status);
         if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
             for (let i = 0; i < message.$unknowns.length; ++i)
@@ -439,7 +454,7 @@ export const MyResponse = $root.MyResponse = (() => {
      * @returns {$protobuf.Writer} Writer
      */
     MyResponse.encodeDelimited = function(message, writer) {
-        return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+        return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
     };
 
     /**
@@ -460,7 +475,17 @@ export const MyResponse = $root.MyResponse = (() => {
             _depth = 0;
         if (_depth > $Reader.recursionLimit)
             throw $Error("max depth exceeded");
-        let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.MyResponse(), value;
+        let end, message, value;
+        if (length === $undefined)
+            end = reader.len;
+        else {
+            end = reader.pos + length;
+            if (end > reader.len)
+                throw $RangeError("index out of range");
+            length = reader.len;
+            reader.len = end;
+        }
+        message = _target || new $root.MyResponse();
         while (reader.pos < end) {
             let start = reader.pos;
             let tag = reader.tag();
@@ -486,6 +511,11 @@ export const MyResponse = $root.MyResponse = (() => {
                 (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
             }
         }
+        if (length !== $undefined) {
+            if (reader.pos !== end)
+                throw $RangeError("index out of range");
+            reader.len = length;
+        }
         if (_end !== $undefined)
             throw $Error("missing end group");
         return message;
@@ -504,7 +534,7 @@ export const MyResponse = $root.MyResponse = (() => {
     MyResponse.decodeDelimited = function(reader) {
         if (!(reader instanceof $Reader))
             reader = new $Reader(reader);
-        return this.decode(reader, reader.uint32());
+        return this.decode(reader, reader.size());
     };
 
     /**
